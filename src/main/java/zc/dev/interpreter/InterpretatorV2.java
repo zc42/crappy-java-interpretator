@@ -11,6 +11,7 @@ import zc.dev.interpreter.tree_parser.NodeType;
 import zc.dev.interpreter.tree_parser.ParseTreeNode;
 import zc.dev.interpreter.tree_parser.ParseTreeNodeUtils;
 
+import java.io.File;
 import java.text.MessageFormat;
 import java.util.Collection;
 import java.util.List;
@@ -19,6 +20,7 @@ import java.util.Stack;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import static zc.dev.interpreter.Utils.getCode;
 import static zc.dev.interpreter.Utils.prnt;
 
 
@@ -291,12 +293,5 @@ public class InterpretatorV2 {
         FunctionDeclarationFilter filter1 = FunctionDeclarationFilter.from(functionDeclarationTokens);
         FunctionDeclarationFilter filter2 = FunctionDeclarationFilter.from(frame, functionCallTokens);
         return filter1.equals(filter2);
-    }
-
-    private static  String getCode() {
-        String fileName = "TestCode.java";
-        String filePath = "/home/zilvinas/git/crappy-java-interpretator/src/main/java/zc/dev/interpreter/test_code/" + fileName;
-        TextFileReader reader = TextFileReader.of(filePath);
-        return String.join("\n", reader.readAll());
     }
 }
