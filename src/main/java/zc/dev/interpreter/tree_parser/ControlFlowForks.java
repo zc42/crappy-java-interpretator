@@ -42,15 +42,15 @@ public class ControlFlowForks {
         ParseTreeNode codeNode = ParseTreeNodeUtils.getChild(node, NodeType.CodeBlock).orElseThrow(() -> new RuntimeException("Predicate node not found"));
         Pair<Integer, Integer> predicateNodeN = predicateNode == null ? null : ParseTreeNodeUtils.getFirstAndLastCodeLineNumbers(predicateNode);
         Pair<Integer, Integer> codeNodeN = ParseTreeNodeUtils.getFirstAndLastCodeLineNumbers(codeNode);
-        NodeWithLineNumbers a = predicateNode == null ? null : NodeWithLineNumbers.from(predicateNode, predicateNodeN.getKey(), predicateNodeN.getValue());
-        NodeWithLineNumbers b = NodeWithLineNumbers.from(codeNode, codeNodeN.getKey(), codeNodeN.getValue());
+        NodeWithLastLineNumber a = predicateNode == null ? null : NodeWithLastLineNumber.from(predicateNode, predicateNodeN.getValue());
+        NodeWithLastLineNumber b = NodeWithLastLineNumber.from(codeNode, codeNodeN.getValue());
         return PredicateAndCodeBlockNodes.from(a, b);
     }
 
     private static void addGoToForElseIf(List<PredicateAndCodeBlockNodes> list, int i, int gotoLineNumber) {
         PredicateAndCodeBlockNodes predicateAndCodeBlockNodes = list.get(i);
-        NodeWithLineNumbers predicateNode = predicateAndCodeBlockNodes.predicateNode;
-        NodeWithLineNumbers codeBlockNode = predicateAndCodeBlockNodes.codeBlockNode;
+        NodeWithLastLineNumber predicateNode = predicateAndCodeBlockNodes.predicateNode;
+        NodeWithLastLineNumber codeBlockNode = predicateAndCodeBlockNodes.codeBlockNode;
 
         //no predicator node means it is else, no need for goto statements
         if (predicateNode == null) return;
@@ -68,14 +68,13 @@ public class ControlFlowForks {
 
     @RequiredArgsConstructor(staticName = "from")
     static public class PredicateAndCodeBlockNodes {
-        private final NodeWithLineNumbers predicateNode;
-        private final NodeWithLineNumbers codeBlockNode;
+        private final NodeWithLastLineNumber predicateNode;
+        private final NodeWithLastLineNumber codeBlockNode;
     }
 
     @RequiredArgsConstructor(staticName = "from")
-    static public class NodeWithLineNumbers {
+    static public class NodeWithLastLineNumber {
         private final ParseTreeNode node;
-        private final int firstLineNumber;
         private final int lastLineNumber;
     }
 
