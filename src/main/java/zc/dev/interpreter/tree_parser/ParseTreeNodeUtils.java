@@ -5,7 +5,6 @@ import zc.dev.interpreter.lexer.Token;
 import zc.dev.interpreter.lexer.TokenType;
 
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -16,7 +15,8 @@ public class ParseTreeNodeUtils {
 
     public static Pair<Integer, Integer> getFirstAndLastCodeLineNumbers(ParseTreeNode node) {
         if (node.getChildren().isEmpty()) throw new RuntimeException("node.getChildren().isEmpty()");
-        List<ParseTreeNode> nodes = getCodeLineNodes(node);
+        Predicate<ParseTreeNode> predicate = e -> e.getLineNb() != null;
+        List<ParseTreeNode> nodes = getAllChildren(node, predicate);
         Integer lineNb = nodes.getFirst().getLineNb();
         Integer lineNb1 = nodes.getLast().getLineNb();
         return P(lineNb, lineNb1);
@@ -24,20 +24,21 @@ public class ParseTreeNodeUtils {
 
     public static FirstLastNode getFirstAndLastCodeLineNodes(ParseTreeNode node) {
         if (node.getChildren().isEmpty()) throw new RuntimeException("node.getChildren().isEmpty()");
-        List<ParseTreeNode> nodes = getCodeLineNodes(node);
+        Predicate<ParseTreeNode> predicate = e -> e.getLineNb() != null;
+        List<ParseTreeNode> nodes = getAllChildren(node, predicate);
         if (nodes.isEmpty()) throw new RuntimeException("nodes.isEmpty()");
         ParseTreeNode firstNode = nodes.getFirst();
         ParseTreeNode lastNode = nodes.getLast();
         return FirstLastNode.from(firstNode, lastNode);
     }
 
-    private static List<ParseTreeNode> getCodeLineNodes(ParseTreeNode node) {
+    public static List<ParseTreeNode> getAllChildren(ParseTreeNode node, Predicate<ParseTreeNode> predicate) {
         List<ParseTreeNode> nodes = new ArrayList<>();
         Stack<ParseTreeNode> stack = new Stack<>();
         do {
             List<ParseTreeNode> children = node.getChildren();
             children.stream()
-                    .filter(e -> e.getLineNb() != null)
+                    .filter(predicate)
                     .forEach(nodes::add);
             stack.push(node);
             node = stack.pop();
