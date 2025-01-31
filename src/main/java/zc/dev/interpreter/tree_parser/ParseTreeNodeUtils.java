@@ -5,6 +5,7 @@ import zc.dev.interpreter.lexer.Token;
 import zc.dev.interpreter.lexer.TokenType;
 
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -34,23 +35,16 @@ public class ParseTreeNodeUtils {
         List<ParseTreeNode> nodes = new ArrayList<>();
         Stack<ParseTreeNode> stack = new Stack<>();
         do {
-            node.getChildren().forEach(e -> {
-                stack.push(e);
-                if (e.getLineNb() != null) nodes.add(e);
-            });
+            List<ParseTreeNode> children = node.getChildren();
+            children.stream()
+                    .filter(e -> e.getLineNb() != null)
+                    .forEach(nodes::add);
+            stack.push(node);
             node = stack.pop();
         } while (!stack.isEmpty());
 
-
         return nodes.stream()
                 .sorted(Comparator.comparingInt(ParseTreeNode::getLineNb))
-                .collect(Collectors.toList());
-    }
-
-    private static List<ParseTreeNode> _getCodeLineNodes(ParseTreeNode node) {
-        if (node.getLineNb() != null) return List.of(node);
-        return node.getChildren().stream()
-                .filter(e -> e.getLineNb() != null)
                 .collect(Collectors.toList());
     }
 
