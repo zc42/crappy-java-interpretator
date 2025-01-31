@@ -78,6 +78,8 @@ public class ParseTreeNumerator {
         boolean hasDecomposedNodeChild = ParseTreeNodeUtils.getChild(node, NodeType.DecomposedStatements).isPresent();
         if (nodeType == NodeType.RegularStatement && !hasDecomposedNodeChild) return true;
         if (nodeType == NodeType.ReturnStatement && !hasDecomposedNodeChild) return true;
+        if (nodeType == NodeType.PUSH_CODE_BLOCK) return true;
+        if (nodeType == NodeType.POP_CODE_BLOCK) return true;
 //        if (nodeType == NodeType.GOTO && !hasDecomposedNodeChild) return true;
 
         ParseTreeNode parent = node.getParent();

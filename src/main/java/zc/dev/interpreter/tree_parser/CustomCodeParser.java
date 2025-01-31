@@ -52,8 +52,8 @@ public class CustomCodeParser {
         ParseTreeContext ctx = getParseTreeContext(code);
         decomposeStatements(ctx);
         ParseTreeNode root = ctx.getRootNode();
-        ParseTreeNumerator.addLineNumbers(root);
         LocalVariableMarking.addCodeBlockMarks(root);
+        ParseTreeNumerator.addLineNumbers(root);
         ControlFlowForks.addControlFlowForks(root);
         ParseTreeNumerator.addExecutablesToFunctionDeclarationNodes(root);
         return root;

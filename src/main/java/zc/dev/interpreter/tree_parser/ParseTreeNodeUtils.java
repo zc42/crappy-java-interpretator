@@ -32,21 +32,20 @@ public class ParseTreeNodeUtils {
         return FirstLastNode.from(firstNode, lastNode);
     }
 
-    public static List<ParseTreeNode> getAllChildren(ParseTreeNode node, Predicate<ParseTreeNode> predicate) {
+    public static List<ParseTreeNode> getAllChildren(ParseTreeNode root, Predicate<ParseTreeNode> predicate) {
         List<ParseTreeNode> nodes = new ArrayList<>();
         Stack<ParseTreeNode> stack = new Stack<>();
-        do {
-            List<ParseTreeNode> children = node.getChildren();
-            children.stream()
-                    .filter(predicate)
-                    .forEach(nodes::add);
-            stack.push(node);
-            node = stack.pop();
-        } while (!stack.isEmpty());
+        stack.push(root);
+        while (!stack.isEmpty()) accumNodes(nodes, stack, predicate);
+        return nodes;
+    }
 
-        return nodes.stream()
-                .sorted(Comparator.comparingInt(ParseTreeNode::getLineNb))
-                .collect(Collectors.toList());
+    private static void accumNodes(List<ParseTreeNode> nodes, Stack<ParseTreeNode> stack, Predicate<ParseTreeNode> predicate) {
+        ParseTreeNode node = stack.pop();
+        if (predicate.test(node)) nodes.add(node);
+        List<ParseTreeNode> children = new ArrayList<>(node.getChildren());
+        Collections.reverse(children);
+        children.forEach(stack::push);
     }
 
     public static Optional<ParseTreeNode> getChild(ParseTreeNode node, NodeType nodeType) {

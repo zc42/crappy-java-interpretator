@@ -25,10 +25,13 @@ public class LocalVariableMarking {
     }
 
     private static void addCodeBlockPushPopCommands(ParseTreeNode node, NodeType nodeType) {
-        ParseTreeNode predicateNode = ParseTreeNodeUtils.getChild(node, nodeType).orElseThrow(() -> new RuntimeException("node not found, type: " + nodeType));
-        FirstLastNode nodes = ParseTreeNodeUtils.getFirstAndLastCodeLineNodes(predicateNode);
-        nodes.getFirstNode().addChild(new ParseTreeNode(NodeType.PUSH_CODE_BLOCK));
-        nodes.getLastNode().addChild(new ParseTreeNode(NodeType.POP_CODE_BLOCK));
+        ParseTreeNode parentNode = ParseTreeNodeUtils.getChild(node, nodeType).orElseThrow(() -> new RuntimeException("node not found, type: " + nodeType));
+        parentNode.addAsFirstChild(new ParseTreeNode(NodeType.PUSH_CODE_BLOCK));
+        parentNode.addChild(new ParseTreeNode(NodeType.POP_CODE_BLOCK));
+
+//        FirstLastNode nodes = ParseTreeNodeUtils.getFirstAndLastCodeLineNodes(parentNode);
+//        nodes.getFirstNode().addChild(new ParseTreeNode(NodeType.PUSH_CODE_BLOCK));
+//        nodes.getLastNode().addChild(new ParseTreeNode(NodeType.POP_CODE_BLOCK));
     }
 
     private static List<ParseTreeNode> getCodeBlocksNodes(ParseTreeNode root) {

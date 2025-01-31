@@ -82,7 +82,7 @@ public class ParseTreeNode {
 
     public Token getLastToken() {
         if (tokens.isEmpty()) return null;
-        return tokens.get(tokens.size() - 1);
+        return tokens.getLast();
     }
 
     public void printTree() {
@@ -92,5 +92,12 @@ public class ParseTreeNode {
     @Override
     public String toString() {
         return MessageFormat.format("{0} | {1}", nodeType, Token.toString(tokens));
+    }
+
+    public void addAsFirstChild(ParseTreeNode node) {
+        List<ParseTreeNode> _children = new ArrayList<>(children);
+        children.clear();
+        children.add(node);
+        children.addAll(_children);
     }
 }

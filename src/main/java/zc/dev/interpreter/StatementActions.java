@@ -49,8 +49,8 @@ public class StatementActions {
         List<Token> tokens = node.getTokens();
         int size = tokens.size();
         IntStream.range(0, size).forEach(e -> accumStatementActions(statementActions, tokens, e));
-        statementActions.pushControlBlock = ParseTreeNodeUtils.hasChildNode(node, e -> e.getNodeType() == NodeType.PUSH_CODE_BLOCK);
-        statementActions.popControlBlock = ParseTreeNodeUtils.hasChildNode(node, e -> e.getNodeType() == NodeType.POP_CODE_BLOCK);
+        statementActions.pushControlBlock = node.getNodeType() == NodeType.PUSH_CODE_BLOCK;//ParseTreeNodeUtils.hasChildNode(node, e -> e.getNodeType() == NodeType.PUSH_CODE_BLOCK);
+        statementActions.popControlBlock = node.getNodeType() == NodeType.POP_CODE_BLOCK;//ParseTreeNodeUtils.hasChildNode(node, e -> e.getNodeType() == NodeType.POP_CODE_BLOCK);
         return statementActions;
     }
 
