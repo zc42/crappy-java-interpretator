@@ -17,6 +17,7 @@ public class ControlFlowForks {
 
     private static void addGotoStatements(ParseTreeNode node) {
         if (node.getNodeType() == NodeType.WhileStatement) addGotoStatmentsToWhile(node);
+        else if (node.getNodeType() == NodeType.IfElseStatement) return;
         else throw new UnsupportedOperationException("Add goto statements, node type: " + node.getNodeType());
     }
 

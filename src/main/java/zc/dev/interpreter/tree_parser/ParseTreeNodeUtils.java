@@ -19,19 +19,18 @@ public class ParseTreeNodeUtils {
     public static Pair<Integer, Integer> getFirstAndLastCodeLineNumbers(ParseTreeNode node) {
         if (node.getChildren().isEmpty()) throw new RuntimeException("node.getChildren().isEmpty()");
         List<ParseTreeNode> nodes = getCodeLineNodes(node);
-        return P(
-                nodes.get(0).getLineNb(),
-                nodes.get(nodes.size() - 1).getLineNb()
-        );
+        Integer lineNb = nodes.getFirst().getLineNb();
+        Integer lineNb1 = nodes.getLast().getLineNb();
+        return P(lineNb, lineNb1);
     }
 
-    public static Pair<ParseTreeNode, ParseTreeNode> getFirstAndLastCodeLineNodes(ParseTreeNode node) {
+    public static FirstLastNode getFirstAndLastCodeLineNodes(ParseTreeNode node) {
         if (node.getChildren().isEmpty()) throw new RuntimeException("node.getChildren().isEmpty()");
         List<ParseTreeNode> nodes = getCodeLineNodes(node);
-        return P(
-                nodes.get(0),
-                nodes.get(nodes.size() - 1)
-        );
+        if (nodes.isEmpty()) throw new RuntimeException("nodes.isEmpty()");
+        ParseTreeNode firstNode = nodes.getFirst();
+        ParseTreeNode lastNode = nodes.getLast();
+        return FirstLastNode.from(firstNode, lastNode);
     }
 
     private static List<ParseTreeNode> getCodeLineNodes(ParseTreeNode node) {

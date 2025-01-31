@@ -18,6 +18,10 @@ public class TestCode {
             boolean o = b > 0 || b + 1 > 0;
             prnt(o);
             b = b - 1;
+
+            if (c < 100) prnt("b < 100");
+            else if (c > 200) prnt("b > 200");
+            else prnt("else ..");
         }
         prnt("done");
     }
