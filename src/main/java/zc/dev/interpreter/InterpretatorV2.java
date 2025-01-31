@@ -27,9 +27,9 @@ public class InterpretatorV2 {
     public static void main(String[] args) {
         String code = getCode();
         ParseTreeNode rootNode = CustomCodeParser.parseCode(code);
-        rootNode.printTree();
-
         if (rootNode == null) throw new RuntimeException("rootNode == null");
+
+        rootNode.printTree();
         ParseTreeNode entryPointNode = ParseTreeNodeUtils.findEntryPoint(rootNode).orElseThrow(() -> new RuntimeException("No entry point found"));
         entryPointNode.printTree();
 
