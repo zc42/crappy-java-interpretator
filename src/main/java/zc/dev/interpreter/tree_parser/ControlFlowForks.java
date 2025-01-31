@@ -1,5 +1,6 @@
 package zc.dev.interpreter.tree_parser;
 
+import lombok.RequiredArgsConstructor;
 import zc.dev.interpreter.Pair;
 import zc.dev.interpreter.lexer.Token;
 import zc.dev.interpreter.lexer.TokenType;
@@ -7,6 +8,7 @@ import zc.dev.interpreter.lexer.TokenType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.IntStream;
 
 public class ControlFlowForks {
 
@@ -17,8 +19,64 @@ public class ControlFlowForks {
 
     private static void addGotoStatements(ParseTreeNode node) {
         if (node.getNodeType() == NodeType.WhileStatement) addGotoStatementsToWhile(node);
-        else if (node.getNodeType() == NodeType.IfElseStatement) return;
+        else if (node.getNodeType() == NodeType.IfElseStatement) addGotoStatementsToIfElse(node);
         else throw new UnsupportedOperationException("Add goto statements, node type: " + node.getNodeType());
+    }
+
+    private static void addGotoStatementsToIfElse(ParseTreeNode parent) {
+
+        List<ParseTreeNode> ifElseNodes = parent.getChildren().stream()
+                .filter(e -> e.getNodeType() == NodeType.If
+                        || e.getNodeType() == NodeType.ElseIf
+                        || e.getNodeType() == NodeType.Else)
+                .toList();
+
+        List<PredicateAndCodeBlockNodes> list = ifElseNodes.stream().map(ControlFlowForks::getPredicateAndCodeBlockNodes).toList();
+        PredicateAndCodeBlockNodes lastPredicateAndCodeBlockNodes = list.getLast();
+        int gotoLineNumber = lastPredicateAndCodeBlockNodes.codeBlockNode.lastLineNumber + 10;
+        IntStream.range(0, list.size()).boxed().forEach(i -> addGoToForElseIf(list, i, gotoLineNumber));
+    }
+
+    private static PredicateAndCodeBlockNodes getPredicateAndCodeBlockNodes(ParseTreeNode node) {
+        ParseTreeNode predicateNode = ParseTreeNodeUtils.getChild(node, NodeType.Predicate).orElse(null);
+        ParseTreeNode codeNode = ParseTreeNodeUtils.getChild(node, NodeType.CodeBlock).orElseThrow(() -> new RuntimeException("Predicate node not found"));
+        Pair<Integer, Integer> predicateNodeN = predicateNode == null ? null : ParseTreeNodeUtils.getFirstAndLastCodeLineNumbers(predicateNode);
+        Pair<Integer, Integer> codeNodeN = ParseTreeNodeUtils.getFirstAndLastCodeLineNumbers(codeNode);
+        NodeWithLineNumbers a = predicateNode == null ? null : NodeWithLineNumbers.from(predicateNode, predicateNodeN.getKey(), predicateNodeN.getValue());
+        NodeWithLineNumbers b = NodeWithLineNumbers.from(codeNode, codeNodeN.getKey(), codeNodeN.getValue());
+        return PredicateAndCodeBlockNodes.from(a, b);
+    }
+
+    private static void addGoToForElseIf(List<PredicateAndCodeBlockNodes> list, int i, int gotoLineNumber) {
+        PredicateAndCodeBlockNodes predicateAndCodeBlockNodes = list.get(i);
+        NodeWithLineNumbers predicateNode = predicateAndCodeBlockNodes.predicateNode;
+        NodeWithLineNumbers codeBlockNode = predicateAndCodeBlockNodes.codeBlockNode;
+
+        //no predicator node means it is else, no need for goto statements
+        if (predicateNode == null) return;
+
+        int gotoIfFalse = codeBlockNode.lastLineNumber + 10;
+        int gotoIfFalseCodeLineNumber = predicateNode.lastLineNumber + 1;
+        addGoToCodeLine(predicateNode.node, TokenType.GOTO_IF_FALSE, gotoIfFalse, gotoIfFalseCodeLineNumber);
+
+        //if one if no need goto else if or else
+        if (list.size() > 1) {
+            int gotoCodeLineNumber = codeBlockNode.lastLineNumber + 1;
+            addGoToCodeLine(codeBlockNode.node, TokenType.GOTO, gotoLineNumber, gotoCodeLineNumber);
+        }
+    }
+
+    @RequiredArgsConstructor(staticName = "from")
+    static public class PredicateAndCodeBlockNodes {
+        private final NodeWithLineNumbers predicateNode;
+        private final NodeWithLineNumbers codeBlockNode;
+    }
+
+    @RequiredArgsConstructor(staticName = "from")
+    static public class NodeWithLineNumbers {
+        private final ParseTreeNode node;
+        private final int firstLineNumber;
+        private final int lastLineNumber;
     }
 
     private static void addGotoStatementsToWhile(ParseTreeNode node) {
@@ -28,11 +86,11 @@ public class ControlFlowForks {
         Pair<Integer, Integer> codeNodeN = ParseTreeNodeUtils.getFirstAndLastCodeLineNumbers(codeNode);
 
         int gotoIfFalseLineNumber = codeNodeN.getValue() + 10;
-        int gotIfFalseCodeLineNumber = predicateNodeN.getValue() + 1;
+        int gotoIfFalseCodeLineNumber = predicateNodeN.getValue() + 1;
         int gotoLineNumber = predicateNodeN.getKey();
         int gotoCodeLineNumber = codeNodeN.getValue() + 1;
 
-        addGoToCodeLine(predicateNode, TokenType.GOTO_IF_FALSE, gotoIfFalseLineNumber, gotIfFalseCodeLineNumber);
+        addGoToCodeLine(predicateNode, TokenType.GOTO_IF_FALSE, gotoIfFalseLineNumber, gotoIfFalseCodeLineNumber);
         addGoToCodeLine(codeNode, TokenType.GOTO, gotoLineNumber, gotoCodeLineNumber);
     }
 
