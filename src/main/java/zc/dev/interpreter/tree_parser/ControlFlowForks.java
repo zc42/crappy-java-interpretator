@@ -111,12 +111,11 @@ public class ControlFlowForks {
         return forkNodes;
     }
 
-    private final static Set<NodeType> forkNodeTypes = Set.of(
-            NodeType.WhileStatement,
-            NodeType.IfElseStatement
-    );
-
     private static void getControlFlowForkNodes(List<ParseTreeNode> forkNodes, ParseTreeNode node) {
+        Set<NodeType> forkNodeTypes = Set.of(
+                NodeType.WhileStatement,
+                NodeType.IfElseStatement
+        );
         if (forkNodeTypes.contains(node.getNodeType())) forkNodes.add(node);
         node.getChildren().forEach(e -> getControlFlowForkNodes(forkNodes, e));
     }
