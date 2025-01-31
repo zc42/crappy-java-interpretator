@@ -111,17 +111,20 @@ public class CallStackFrame {
     public void pushControlBlock() {
         int key = codeBlockMarks.isEmpty() ? 0 : codeBlockMarks.peek() + 1;
         codeBlockMarks.push(key);
+        prnt("push key=" + key);
         currentExecutableNodeActions.setPushControlBlock(false);
     }
 
     public void popControlBlock() {
         if (codeBlockMarks.isEmpty()) throw new RuntimeException("codeBlockMarks is empty");
         int key = codeBlockMarks.pop();
-        if (!codeBlockVariableNames.containsKey(key))
-            throw new RuntimeException("!codeBlockVariableNames.containsKey(codeBlockMarkNode)");
-        codeBlockVariableNames.get(key).forEach(localVariables::remove);
-        codeBlockVariableNames.remove(key);
         currentExecutableNodeActions.setPopControlBlock(false);
+        prnt("pop key=" + key);
+        if (codeBlockVariableNames.containsKey(key)) {
+//            throw new RuntimeException("!codeBlockVariableNames.containsKey(codeBlockMarkNode)");
+            codeBlockVariableNames.get(key).forEach(localVariables::remove);
+            codeBlockVariableNames.remove(key);
+        }
     }
 
     public Optional<ParseTreeNode> getCurrentExecutableNode() {

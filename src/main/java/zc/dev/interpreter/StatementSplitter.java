@@ -105,43 +105,6 @@ public class StatementSplitter {
         }
     }
 
-    private static Optional<Statement> getStatementV0(Stack<Statement> stack, List<Token> tokens, int index) {
-        Token token = tokens.get(index);
-        Token prevToken = index - 1 >= 0 ? tokens.get(index - 1) : null;
-        Token nextToken = index + 1 < tokens.size() ? tokens.get(index + 1) : null;
-
-        boolean isFunctionCall = token.getType() == TokenType.IDENTIFIER
-                && nextToken != null
-                && nextToken.getValue().equals("(");
-        boolean isExpression = prevToken != null
-                && prevToken.getType() == TokenType.ARITHMETIC_OPERATOR
-                && token.getValue().equals("(");
-        boolean isTerminal = token.getValue().equals(")");
-        boolean isLastToken = index == tokens.size() - 1;
-
-        if (stack.isEmpty()) stack.push(Statement.from(NodeType.ArithmeticExpressionStatement));
-        Statement statement = stack.peek();
-
-        if (isFunctionCall || isExpression) {
-            statement = isFunctionCall ? Statement.from(NodeType.FunctionCallStatement) : Statement.from(NodeType.ArithmeticExpressionStatement);
-            statement.getTokens().add(token);
-            stack.push(statement);
-        } else if (isTerminal) {// && !isLastToken) {
-            statement.getTokens().add(token);
-            Statement popped = stack.pop();
-            addSystemVariableAssignment(popped);
-            Token variableToken = popped.getTokens().get(1);
-            stack.peek().getTokens().add(variableToken);
-            return Optional.of(popped);
-//        } else if (isTerminal && isLastToken) {
-//            statement.tokens.add(token);
-//            Statement popped = stack.pop();
-//            return Optional.of(popped);
-        } else statement.getTokens().add(token);
-
-        return Optional.empty();
-    }
-
     private static Optional<Statement> getStatement(Stack<Statement> stack, List<Token> tokens, int index) {
 //        Token.prntTokens(tokens);
 

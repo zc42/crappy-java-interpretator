@@ -35,7 +35,7 @@ public enum NodeType {
     If,
     ElseIf,
     Else,
-    Comment, Annotation, SystemFunction, DecomposedStatements, BooleanExpressionStatement, UNKNOWN, GOTO, PUSH_CODE_BLOCK, POP_CODE_BLOCK, VariableIdentifier
+    Comment, Annotation, SystemFunction, DecomposedStatements, BooleanExpressionStatement, UNKNOWN, GOTO, PUSH_CODE_BLOCK, POP_CODE_BLOCK, Predicate, VariableIdentifier
 }
 
 

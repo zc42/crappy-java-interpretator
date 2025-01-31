@@ -22,7 +22,7 @@ public class ControlFlowForks {
     }
 
     private static void addGotoStatementsToWhile(ParseTreeNode node) {
-        ParseTreeNode predicateNode = ParseTreeNodeUtils.getChild(node, NodeType.DecomposedStatements).orElseThrow(() -> new RuntimeException("Predicate node not found"));
+        ParseTreeNode predicateNode = ParseTreeNodeUtils.getChild(node, NodeType.Predicate).orElseThrow(() -> new RuntimeException("Predicate node not found"));
         ParseTreeNode codeNode = ParseTreeNodeUtils.getChild(node, NodeType.CodeBlock).orElseThrow(() -> new RuntimeException("Predicate node not found"));
         Pair<Integer, Integer> predicateNodeN = ParseTreeNodeUtils.getFirstAndLastCodeLineNumbers(predicateNode);
         Pair<Integer, Integer> codeNodeN = ParseTreeNodeUtils.getFirstAndLastCodeLineNumbers(codeNode);

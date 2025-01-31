@@ -86,6 +86,7 @@ public class ParseTreeNumerator {
         if (parent == null) return false;
         NodeType parentNodeType = parent.getNodeType();
         if (parentNodeType == NodeType.DecomposedStatements) return true;
+        if (parentNodeType == NodeType.Predicate) return true;
 
         return false;
     }

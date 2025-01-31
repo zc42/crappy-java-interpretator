@@ -1,8 +1,6 @@
 package zc.dev.interpreter.tree_parser;
 
 import zc.dev.interpreter.Pair;
-import zc.dev.interpreter.Statement;
-import zc.dev.interpreter.StatementSplitter;
 import zc.dev.interpreter.TextFileReader;
 import zc.dev.interpreter.lexer.LexerWithFSA;
 import zc.dev.interpreter.lexer.Token;
@@ -50,8 +48,11 @@ public class CustomCodeParser {
 
     public static ParseTreeNode parseCode(String code) {
         ParseTreeContext ctx = getParseTreeContext(code);
-        decomposeStatements(ctx);
         ParseTreeNode root = ctx.getRootNode();
+        MissingCodeBlocks.addMissingCodeBlocks(root);
+        StatementDecomposer.decomposeStatements(root);
+        root.printTree();
+        NodeTrimmer.removeDecomposedNodes(root);
         LocalVariableMarking.addCodeBlockMarks(root);
         ParseTreeNumerator.addLineNumbers(root);
         ControlFlowForks.addControlFlowForks(root);
@@ -59,33 +60,7 @@ public class CustomCodeParser {
         return root;
     }
 
-    private static void decomposeStatements(ParseTreeContext ctx) {
-        ParseTreeNode root = ctx.getRootNode();
-        Stack<ParseTreeNode> stack = new Stack<>();
-        stack.push(root);
-        while (!stack.isEmpty()) {
-            ParseTreeNode node = stack.pop();
-            node.getChildren().forEach(stack::push);
-            getDecomposedStatements(node);
-        }
-    }
-
-    private static void getDecomposedStatements(ParseTreeNode node) {
-        List<Statement> statements = StatementSplitter.split(node);
-        if (statements.size() == 1) return;
-        ParseTreeNode decomposedStatements = new ParseTreeNode(NodeType.DecomposedStatements);
-        statements.forEach(e -> decomposedStatements.addChild(new ParseTreeNode(e.getType(), e.getTokens())));
-        node.addChild(decomposedStatements);
-        if (node.getChildren().size() == 1) return;
-        Comparator<ParseTreeNode> comparator = (o1, o2) -> {
-            int c1 = o1.getNodeType() == NodeType.DecomposedStatements ? -1 : 1;
-            int c2 = o2.getNodeType() == NodeType.DecomposedStatements ? -1 : 1;
-            return c1 - c2;
-        };
-        node.getChildren().sort(comparator);
-    }
-
-    private static  ParseTreeContext getParseTreeContext(String code) {
+    private static ParseTreeContext getParseTreeContext(String code) {
         List<Token> tokens = LexerWithFSA.tokenize(code);
         ParseTreeContext ctx = ParseTreeContext.from(tokens);
         while (ctx.hasNext()) {
@@ -174,7 +149,7 @@ public class CustomCodeParser {
         if (tokens.isEmpty() || !Objects.equals(tokens.get(tokens.size() - 1).getValue(), ";"))
             throw new UnsupportedOperationException("tokens.isEmpty() || !Objects.equals(tokens.get(tokens.size() - 1).value, \";\")");
 
-         List<String> values = tokens.stream().map(Token::getValue).collect(Collectors.toList());
+        List<String> values = tokens.stream().map(Token::getValue).collect(Collectors.toList());
         List<String> testValues = List.of("return", "ctx", ".", "getParseTreeRoot", "(", ")", ";");
         if (values.containsAll(testValues)) {
             values = values;
@@ -347,7 +322,7 @@ public class CustomCodeParser {
         ctx.setCurrentNode(node);
     }
 
-    private static  List<Token> getTokensTerminatedWithParentheses(ParseTreeContext ctx) {
+    private static List<Token> getTokensTerminatedWithParentheses(ParseTreeContext ctx) {
         int t = 0;
         List<Token> tokens = new ArrayList<>();
         boolean foundTerminal = false;
