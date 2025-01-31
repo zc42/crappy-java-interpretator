@@ -16,12 +16,12 @@ public class ControlFlowForks {
     }
 
     private static void addGotoStatements(ParseTreeNode node) {
-        if (node.getNodeType() == NodeType.WhileStatement) addGotoStatmentsToWhile(node);
+        if (node.getNodeType() == NodeType.WhileStatement) addGotoStatementsToWhile(node);
         else if (node.getNodeType() == NodeType.IfElseStatement) return;
         else throw new UnsupportedOperationException("Add goto statements, node type: " + node.getNodeType());
     }
 
-    private static void addGotoStatmentsToWhile(ParseTreeNode node) {
+    private static void addGotoStatementsToWhile(ParseTreeNode node) {
         ParseTreeNode predicateNode = ParseTreeNodeUtils.getChild(node, NodeType.DecomposedStatements).orElseThrow(() -> new RuntimeException("Predicate node not found"));
         ParseTreeNode codeNode = ParseTreeNodeUtils.getChild(node, NodeType.CodeBlock).orElseThrow(() -> new RuntimeException("Predicate node not found"));
         Pair<Integer, Integer> predicateNodeN = ParseTreeNodeUtils.getFirstAndLastCodeLineNumbers(predicateNode);

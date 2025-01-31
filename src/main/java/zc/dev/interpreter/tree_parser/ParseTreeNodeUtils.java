@@ -4,10 +4,7 @@ import zc.dev.interpreter.Pair;
 import zc.dev.interpreter.lexer.Token;
 import zc.dev.interpreter.lexer.TokenType;
 
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -34,9 +31,18 @@ public class ParseTreeNodeUtils {
     }
 
     private static List<ParseTreeNode> getCodeLineNodes(ParseTreeNode node) {
-        return node.getChildren().stream()
-                .map(ParseTreeNodeUtils::_getCodeLineNodes)
-                .flatMap(Collection::stream)
+        List<ParseTreeNode> nodes = new ArrayList<>();
+        Stack<ParseTreeNode> stack = new Stack<>();
+        do {
+            node.getChildren().forEach(e -> {
+                stack.push(e);
+                if (e.getLineNb() != null) nodes.add(e);
+            });
+            node = stack.pop();
+        } while (!stack.isEmpty());
+
+
+        return nodes.stream()
                 .sorted(Comparator.comparingInt(ParseTreeNode::getLineNb))
                 .collect(Collectors.toList());
     }
