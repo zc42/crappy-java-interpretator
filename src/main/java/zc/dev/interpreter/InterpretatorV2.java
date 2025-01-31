@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 import static zc.dev.interpreter.Utils.prnt;
 
 
-public class InterpreterV2 {
+public class InterpretatorV2 {
 
     public static void main(String[] args) {
         String code = getCode();
