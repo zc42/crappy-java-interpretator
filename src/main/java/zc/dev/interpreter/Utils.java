@@ -16,10 +16,11 @@ public class Utils {
     private static String getFilePath() {
         File currentDir = new File(".");
         String dir0 = currentDir.getAbsolutePath();
-        boolean isWindows = dir0.contains(":\\\\");
+        boolean isWindows = dir0.contains(":\\");
         String dir1 = isWindows
-                ?"\\src\\main\\java\\zc\\dev\\interpreter\\test_code\\"
-                :"/src/main/java/zc/dev/interpreter/test_code/";
+                ? "\\src\\main\\java\\zc\\dev\\interpreter\\test_code\\"
+                : "/src/main/java/zc/dev/interpreter/test_code/";
+        dir0 = isWindows ? dir0.substring(0, dir0.length() - 2) : dir0;
         String fileName = "TestCode.java";
         return dir0 + dir1 + fileName;
     }
