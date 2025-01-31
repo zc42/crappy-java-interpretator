@@ -66,23 +66,16 @@ public class InterpretatorV2 {
         StatementActions statementActions = frame.getCurrentExecutableNodeActions();
         prnt(statementActions);
 
-        if (node.getNodeType() == NodeType.GOTO) {
-            executeGoToStatement(frame, node);
-            return;
-        }
+        if (node.getNodeType() == NodeType.GOTO) executeGoToStatement(frame, node);
+        else if (statementActions.isPushControlBlock()) frame.pushControlBlock();
+        else if (statementActions.isCallFunction()) executeCallFunctionStatement(ctx, tokens);
+        else if (statementActions.isArithmeticOperation()) executeArithmeticOperationStatement(tokens, frame);
+        else if (statementActions.isBooleanOperation()) executeBooleanOperationStatement(tokens, frame);
+        else if (statementActions.isCreateVariable()) executeCreateVariableStatement(frame);
+        else if (statementActions.isAssignValue()) executeAssignVariableStatement(frame);
+        else if (statementActions.isReturnStatement()) executeReturnStatement(ctx, tokens);
+        else if (statementActions.isPopControlBlock()) frame.popControlBlock();
 
-        if (statementActions.isPushControlBlock()) frame.pushControlBlock();
-
-        if (statementActions.isCallFunction()) {
-            statementCallFunction(ctx, tokens);
-            return;
-        } else if (statementActions.isArithmeticOperation()) statementExecuteArithmeticOperation(tokens, frame);
-        else if (statementActions.isBooleanOperation()) statementExecuteBooleanOperation(tokens, frame);
-
-        if (statementActions.isCreateVariable()) statementCreateVariable(frame);
-        if (statementActions.isAssignValue()) statementAssignVariable(frame);
-        if (statementActions.isReturnStatement()) statementReturn(ctx, tokens);
-        if (statementActions.isPopControlBlock()) frame.popControlBlock();
         prnt("----------");
     }
 
@@ -110,7 +103,7 @@ public class InterpretatorV2 {
         prnt("done goto statement " + node);
     }
 
-    private static void statementReturn(InterpreterContext ctx, List<Token> tokens) {
+    private static void executeReturnStatement(InterpreterContext ctx, List<Token> tokens) {
         Stack<CallStackFrame> callStack = ctx.getCallStack();
         CallStackFrame frame = callStack.peek();
         prnt("function call ended, return value: " + frame.getTempValue());
@@ -140,21 +133,21 @@ public class InterpretatorV2 {
         prnt(".. function call ended, return value: " + frame.getTempValue());
     }
 
-    private static void statementAssignVariable(CallStackFrame frame) {
+    private static void executeAssignVariableStatement(CallStackFrame frame) {
         prnt("assignValue..");
         String name = frame.getCurrentExecutableNodeActions().getVariableName();
         frame.assignVariable(name);
         prnt("assign variable.." + name);
     }
 
-    private static void statementCreateVariable(CallStackFrame frame) {
+    private static void executeCreateVariableStatement(CallStackFrame frame) {
         prnt("createVariable..");
         String name = frame.getCurrentExecutableNodeActions().getVariableName();
         frame.createVariable(name);
         prnt("variable created.." + name);
     }
 
-    private static void statementExecuteBooleanOperation(List<Token> tokens, CallStackFrame frame) {
+    private static void executeBooleanOperationStatement(List<Token> tokens, CallStackFrame frame) {
         prnt("execute Boolean Operation..");
         List<Token> expressionTokens = removeAssignmentPart(tokens);
 
@@ -162,14 +155,14 @@ public class InterpretatorV2 {
         Token.prntTokens(expressionTokens);
         Token.prntTokens(postfix);
 
-        Expression<Boolean> parsedExpression = (Expression<Boolean>) BooleanExpressionParser.parse(frame, postfix);
+        Expression<Boolean> parsedExpression = BooleanExpressionParser.parse(frame, postfix);
         frame.addTempValue(parsedExpression.interpret());
         frame.getCurrentExecutableNodeActions().setBooleanOperation(false);
         prnt("result of expression: " + frame.getTempValue());
     }
 
 
-    private static void statementExecuteArithmeticOperation(List<Token> tokens, CallStackFrame frame) {
+    private static void executeArithmeticOperationStatement(List<Token> tokens, CallStackFrame frame) {
         prnt("executeArithmeticOperation..");
         Token.prntTokens(tokens);
         List<Token> expressionTokens = removeAssignmentPart(tokens);
@@ -184,7 +177,7 @@ public class InterpretatorV2 {
         prnt("result of expression: " + frame.getTempValue());
     }
 
-    private static void statementCallFunction(InterpreterContext ctx, List<Token> tokens) {
+    private static void executeCallFunctionStatement(InterpreterContext ctx, List<Token> tokens) {
         prnt("calling function: " + Token.toString(tokens));
         CallStackFrame frame = ctx.getCallStack().peek();
         //=====for debug========
@@ -268,9 +261,6 @@ public class InterpretatorV2 {
         String name = filter.getName().getValue();
         List<Token> argumentTypes = filter.getArgumentTypes();
         if (name.equals("prnt") && argumentTypes.size() == 1) {
-            if (argumentValues.length == 0) {
-                argumentValues = argumentValues;
-            }
             prnt(argumentValues[0]);
             return Optional.empty();
         }
@@ -281,7 +271,7 @@ public class InterpretatorV2 {
     private static ParseTreeNode findParentClassNode(InterpreterContext ctx) {
         ParseTreeNode node = ctx.getCurrentCallStackFrame().getNode();
         List<Token> tokens = node.getTokens();
-        while (node != null && node.getNodeType() != NodeType.Root) {
+        while (node.getNodeType() != NodeType.Root) {
             node = node.getParent();
             if (node.getNodeType() == NodeType.Class) return node;
         }

@@ -44,7 +44,7 @@ public class CallStackFrame {
 
         executableNodes.forEach(e -> executablesMap.put(e.getLineNb(), e));
         codeLinesNumbers = executablesMap.values().stream().map(ParseTreeNode::getLineNb).sorted().collect(Collectors.toList());
-        Integer key = codeLinesNumbers.get(0);
+        Integer key = codeLinesNumbers.getFirst();
         currentExecutableNode = executablesMap.get(key);
         currentExecutableNodeActions = currentExecutableNode.getStatementActions().getCopy();
     }
@@ -52,10 +52,10 @@ public class CallStackFrame {
     private void addArgsToVariables(ParseTreeNode node, Object[] args) {
         List<Token> tokens = node.getTokens();
         int start = tokens.indexOf(new Token(TokenType.PARENTHESES, "("));
-         List<Token> argNames = tokens.stream()
+        List<Token> argNames = tokens.stream()
                 .skip(start)
                 .filter(e -> e.getType() == TokenType.IDENTIFIER)
-                .collect(Collectors.toList());
+                .toList();
 
         IntStream.range(0, argNames.size()).forEach(i -> {
             String name = argNames.get(i).getValue();

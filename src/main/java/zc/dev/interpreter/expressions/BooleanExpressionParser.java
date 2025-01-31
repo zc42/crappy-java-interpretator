@@ -15,7 +15,7 @@ public class BooleanExpressionParser {
     private static final Map<String, BiFunction<Expression<Boolean>, Expression<Boolean>, Expression<Boolean>>> operationFunctionMap1 = getOperationFunctionMap1();
     private static final Map<String, BiFunction<Expression<Double>, Expression<Double>, Expression<Boolean>>> operationFunctionMap2 = getOperationFunctionMap();
 
-    public static Expression<?> parse(CallStackFrame frame, List<Token> tokens) {
+    public static Expression<Boolean> parse(CallStackFrame frame, List<Token> tokens) {
 
 //        long operationCount = tokens.stream().filter(e -> e.getType() == TokenType.ARITHMETIC_OPERATOR).count();
 //        long numberCount = tokens.stream().filter(e -> e.getType() == TokenType.NUMBER || e.getType() == TokenType.IDENTIFIER).count();
@@ -30,7 +30,7 @@ public class BooleanExpressionParser {
         if (stack.size() != 1) {
             throw new ArithmeticException("Syntax error: stack.size() != 1\ntokens: " + Token.toString(tokens));
         }
-        return stack.pop();
+        return (Expression<Boolean>) stack.pop();
     }
 
     private static void process(CallStackFrame frame, Stack<Expression<?>> stack, Token token) {
