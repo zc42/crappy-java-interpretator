@@ -21,20 +21,24 @@ public class StatementDecomposer {
 
     private static void getDecomposedStatements(ParseTreeNode node) {
         List<Statement> statements = StatementSplitter.split(node);
-        if (statements.size() == 1) return;
-        List<NodeType> predicateNodeTypes = List.of(NodeType.WhileStatement, NodeType.IfElseStatement, NodeType.ForStatement);
-        NodeType nodeType = predicateNodeTypes.contains(node.getNodeType())
-                ? NodeType.Predicate
-                : NodeType.DecomposedStatements;
-        ParseTreeNode decomposedStatements = new ParseTreeNode(nodeType);
+        NodeType nodeType = node.getNodeType();
+        boolean predicateNode = isPredicateNode(nodeType);
+        if (!predicateNode && statements.size() == 1) return;
+        NodeType newNodeType = predicateNode ? NodeType.Predicate : NodeType.DecomposedStatements;
+        ParseTreeNode decomposedStatements = new ParseTreeNode(newNodeType);
         statements.forEach(e -> decomposedStatements.addChild(new ParseTreeNode(e.getType(), e.getTokens())));
         node.addChild(decomposedStatements);
         if (node.getChildren().size() == 1) return;
         Comparator<ParseTreeNode> comparator = (o1, o2) -> {
-            int c1 = o1.getNodeType() == nodeType ? -1 : 1;
-            int c2 = o2.getNodeType() == nodeType ? -1 : 1;
+            int c1 = o1.getNodeType() == newNodeType ? -1 : 1;
+            int c2 = o2.getNodeType() == newNodeType ? -1 : 1;
             return c1 - c2;
         };
         node.getChildren().sort(comparator);
+    }
+
+    public static boolean isPredicateNode(NodeType nodeType) {
+        List<NodeType> predicateNodeTypes = List.of(NodeType.WhileStatement, NodeType.ForStatement, NodeType.If, NodeType.ElseIf);
+        return predicateNodeTypes.contains(nodeType);
     }
 }

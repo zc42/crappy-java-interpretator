@@ -7,6 +7,7 @@ import zc.dev.interpreter.tree_parser.NodeType;
 import zc.dev.interpreter.tree_parser.ParseTreeNode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import zc.dev.interpreter.tree_parser.StatementDecomposer;
 
 import java.text.MessageFormat;
 import java.util.*;
@@ -38,14 +39,14 @@ public class StatementSplitter {
     public static  List<Statement> split(ParseTreeNode node) {
         List<Token> tokens = node.getTokens();
         StatementActions actions = StatementActions.main(node);
-        boolean isWhile = node.getNodeType() == NodeType.WhileStatement;
-        if (!isWhile && !actions.isNeedToSplit()) {
+        boolean nodeWithPredicate = StatementDecomposer.isPredicateNode(node.getNodeType());
+        if (!nodeWithPredicate && !actions.isNeedToSplit()) {
             Statement statement = Statement.of(node.getNodeType(), tokens);
             return List.of(statement);
         }
 
-        if (isWhile) {
-            tokens = Token.remove(tokens, "while");
+        if (nodeWithPredicate) {
+            tokens = Token.remove(tokens, "if", "else", "for", "while");
             Token.removeAt(tokens, "(", 0);
             Token.removeAt(tokens, ")", tokens.size() - 1);
         }

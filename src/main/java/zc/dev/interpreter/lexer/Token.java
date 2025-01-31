@@ -51,7 +51,7 @@ public class Token {
     }
 
     public static List<Token> remove(List<Token> tokens, String... values) {
-         List<String> list = Arrays.stream(values).collect(Collectors.toList());
+         List<String> list = Arrays.stream(values).toList();
         return tokens.stream()
                 .filter(e -> !list.contains(e.getValue()))
                 .collect(Collectors.toList());
