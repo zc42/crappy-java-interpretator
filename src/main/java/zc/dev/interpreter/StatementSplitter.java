@@ -23,17 +23,20 @@ public class StatementSplitter {
         List<String> lines = List.of(
 //                "b = 1 + a(a + 1, a(1, 2));",
 //                "b > 0 || b + 1 > 0 || a(1)",
-                "int c = a ( b + 1 , a ( 1 , 2 ) ) + 1"
+//                "int c = a ( b + 1 , a ( 1 , 2 ) ) + 1"
+                "boolean c = a%2==0",
+                "boolean c = 0==a%2"
         );
 
         lines.forEach(StatementSplitter::split);
     }
 
-    private static void split(String line) {
+    public static List<Statement> split(String line) {
         List<Token> tokens = LexerWithFSA.tokenize(line);
         Token.prntTokens(tokens);
         List<Statement> statements = split(tokens);
         statements.forEach(e -> prnt(MessageFormat.format("{0} {1}", e.getType(), Token.toString(e.getTokens()))));
+        return statements;
     }
 
     public static List<Statement> split(ParseTreeNode node) {
