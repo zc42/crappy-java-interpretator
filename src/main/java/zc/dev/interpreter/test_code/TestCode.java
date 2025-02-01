@@ -19,6 +19,9 @@ public class TestCode {
             prnt(o);
             b = b - 1;
 
+            if (0 == b % 2) prnt("b % 2 == 0");
+            else prnt("b % 2 != 0");
+
             if (c < 100) prnt("b < 100");
             else if (c > 200) prnt("b > 200");
             else prnt("else ..");

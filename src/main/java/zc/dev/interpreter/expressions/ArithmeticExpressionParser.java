@@ -1,11 +1,7 @@
 package zc.dev.interpreter.expressions;
 
 import zc.dev.interpreter.call_stack.CallStackFrame;
-import zc.dev.interpreter.expressions.arithmetic_expressions.NumberExpression;
-import zc.dev.interpreter.expressions.arithmetic_expressions.AdditionExpression;
-import zc.dev.interpreter.expressions.arithmetic_expressions.SubtractionExpression;
-import zc.dev.interpreter.expressions.arithmetic_expressions.MultiplicationExpression;
-import zc.dev.interpreter.expressions.arithmetic_expressions.DivisionExpression;
+import zc.dev.interpreter.expressions.arithmetic_expressions.*;
 import zc.dev.interpreter.lexer.Token;
 import zc.dev.interpreter.lexer.TokenType;
 
@@ -62,6 +58,7 @@ public class ArithmeticExpressionParser {
         map.put("-", SubtractionExpression::new);
         map.put("*", MultiplicationExpression::new);
         map.put("/", DivisionExpression::new);
+        map.put("%", ModExpression::new);
         return map;
     }
 

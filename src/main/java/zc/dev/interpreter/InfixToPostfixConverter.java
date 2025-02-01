@@ -52,6 +52,7 @@ public class InfixToPostfixConverter {
         Map<String, Integer> map = new HashMap<>();
         map.put("+", 1);
         map.put("-", 1);
+        map.put("%", 2);
         map.put("*", 2);
         map.put("/", 2);
         map.put("!", 3);
@@ -59,6 +60,7 @@ public class InfixToPostfixConverter {
         map.put("<", 2);
         map.put(">", 2);
         map.put("||", 1);
+        map.put("==", 1);
         return map;
     }
 

@@ -36,7 +36,7 @@ public class StatementSplitter {
         statements.forEach(e -> prnt(MessageFormat.format("{0} {1}", e.getType(), Token.toString(e.getTokens()))));
     }
 
-    public static  List<Statement> split(ParseTreeNode node) {
+    public static List<Statement> split(ParseTreeNode node) {
         List<Token> tokens = node.getTokens();
         StatementActions actions = StatementActions.main(node);
         boolean nodeWithPredicate = StatementDecomposer.isPredicateNode(node.getNodeType());
@@ -53,7 +53,7 @@ public class StatementSplitter {
         return split(tokens);
     }
 
-    private static  List<Statement> split(List<Token> tokens) {
+    private static List<Statement> split(List<Token> tokens) {
         tokens = Token.removeSemicolon(tokens);
 
         Stack<Statement> stack = new Stack<>();
@@ -107,9 +107,13 @@ public class StatementSplitter {
     }
 
     private static Optional<Statement> getStatement(Stack<Statement> stack, List<Token> tokens, int index) {
+
 //        Token.prntTokens(tokens);
 
         Token token = tokens.get(index);
+        if (Objects.equals(token.getValue(), "==")) {
+            token = token;
+        }
 //        Token prevToken = index - 1 >= 0 ? tokens.get(index - 1) : null;
 //        Token nextToken = index + 1 < tokens.size() ? tokens.get(index + 1) : null;
 
@@ -125,6 +129,10 @@ public class StatementSplitter {
         TokenPredicate arithmeticTermPredicate1 = TokenPredicate.from(-1, e -> e.getType() == TokenType.ARITHMETIC_OPERATOR);
         TokenPredicate arithmeticTermPredicate2 = TokenPredicate.from(0, e -> e.getType() == TokenType.IDENTIFIER || e.getType() == TokenType.NUMBER);
         TokenPredicate arithmeticTermPredicate3 = TokenPredicate.from(1, e -> e.getType() != TokenType.ARITHMETIC_OPERATOR);
+
+        TokenPredicate arithmeticTermPredicate11 = TokenPredicate.from(-2, e -> e.getType() == TokenType.IDENTIFIER || e.getType() == TokenType.NUMBER);
+        TokenPredicate arithmeticTermPredicate12 = TokenPredicate.from(-1, e -> e.getType() == TokenType.ARITHMETIC_OPERATOR);
+        TokenPredicate arithmeticTermPredicate13 = TokenPredicate.from(0, e -> e.getType() == TokenType.IDENTIFIER || e.getType() == TokenType.NUMBER);
 
 //        TokenPredicate booleanPredicate1 = TokenPredicate.from(0, e -> e.getType() == TokenType.IDENTIFIER || e.getType() == TokenType.NUMBER);
         TokenPredicate booleanPredicate2 = TokenPredicate.from(0, e -> e.getType() == TokenType.BOOLEAN_OPERATOR);
@@ -151,7 +159,9 @@ public class StatementSplitter {
                 && statement.getType() != getNodeType(isFunctionCall, isArithmeticExpression, isBooleanExpression)
                 && NodeType.UNKNOWN != getNodeType(isFunctionCall, isArithmeticExpression, isBooleanExpression))
 
-                || tokenTester.testToken(arithmeticTermPredicate1, arithmeticTermPredicate2, arithmeticTermPredicate3);
+                || tokenTester.testToken(arithmeticTermPredicate1, arithmeticTermPredicate2, arithmeticTermPredicate3)
+                || tokenTester.testToken(arithmeticTermPredicate11, arithmeticTermPredicate12, arithmeticTermPredicate13)
+                && index == tokens.size() - 1;
 
 
         if (stack.isEmpty()) {
@@ -187,7 +197,7 @@ public class StatementSplitter {
         return Optional.empty();
     }
 
-    private static  NodeType getNodeType(StatementActions actions) {
+    private static NodeType getNodeType(StatementActions actions) {
         return actions.isCallFunction()
                 ? NodeType.FunctionCallStatement
                 : actions.isArithmeticOperation()
@@ -197,7 +207,7 @@ public class StatementSplitter {
                 : NodeType.UNKNOWN;
     }
 
-    private static  NodeType getNodeType(boolean isFunctionCall, boolean isArithmeticExpression, boolean isBooleanExpression) {
+    private static NodeType getNodeType(boolean isFunctionCall, boolean isArithmeticExpression, boolean isBooleanExpression) {
         return isFunctionCall
                 ? NodeType.FunctionCallStatement
                 : isArithmeticExpression

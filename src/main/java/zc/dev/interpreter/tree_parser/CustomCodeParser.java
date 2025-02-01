@@ -84,14 +84,16 @@ public class CustomCodeParser {
 
     private static NodeType detectNodeType(ParseTreeContext ctx) {
         Token token = ctx.peek();
-        if (token.getType() == TokenType.NewLine)
+
+        if (token.getType() == TokenType.NewLine) {
             while (ctx.peek().getType() == TokenType.NewLine) {
                 ctx.next();
                 token = ctx.peek();
             }
+        }
 
         ParseTreeNode currentNode = ctx.getCurrentNode();
-        if (currentNode == null) {
+        if (token.getValue().equals("==")) {
             currentNode = currentNode;
         }
         NodeType currentNodeType = currentNode.getNodeType();
@@ -384,7 +386,6 @@ public class CustomCodeParser {
             gotOpenBrace = gotOpenBrace || Objects.equals(token.getValue(), "(");
             gotSemicolon = gotSemicolon || token.getType() == TokenType.SEMI_COLON;
             gotAssignment = gotAssignment || Objects.equals(token.getValue(), "=");
-            ;
             gotIdentifier = gotIdentifier || token.getType() == TokenType.IDENTIFIER;
             tokens.add(token);
 

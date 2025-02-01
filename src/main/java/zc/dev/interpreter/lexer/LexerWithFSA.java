@@ -1,5 +1,6 @@
 package zc.dev.interpreter.lexer;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -10,16 +11,15 @@ public class LexerWithFSA {
         while (ctx.hasNext()) {
             char c = ctx.peek();
 
-            if ("&".indexOf(c) != -1) {
+            if ("%".indexOf(c) != -1) {
                 c = c;
             }
-
 
             if ("\n".indexOf(c) != -1) addToken(ctx, TokenType.NewLine);
             else if (Character.isWhitespace(c)) ctx.next();
             else if ("&|".indexOf(c) != -1 || Character.isLetter(c)) processIdentifierOrKeywordState(ctx);
             else if (Character.isDigit(c)) processNumberState(ctx);
-            else if ("+-*/".indexOf(c) != -1) addToken(ctx, TokenType.ARITHMETIC_OPERATOR);
+            else if ("+-*/%".indexOf(c) != -1) addToken(ctx, TokenType.ARITHMETIC_OPERATOR);
             else if ("!<>".indexOf(c) != -1) addToken(ctx, TokenType.BOOLEAN_OPERATOR);
             else if ("=".indexOf(c) != -1) addToken(ctx, TokenType.ASSIGNMENT);
             else if ("\"".indexOf(c) != -1) processStringState(ctx);
@@ -33,7 +33,25 @@ public class LexerWithFSA {
 
             else addToken(ctx, TokenType.UNKNOWN);
         }
-        return ctx.getTokens();
+        List<Token> tokens = ctx.getTokens();
+        List<Token> seed = new ArrayList<>();
+        return tokens.stream().reduce(seed, LexerWithFSA::accumTokens, (a, b) -> a);
+
+    }
+
+    private static List<Token> accumTokens(List<Token> tokens, Token token) {
+        if (tokens.isEmpty()) {
+            tokens.add(token);
+        } else {
+            Token last = tokens.getLast();
+            if (last.getValue().equals("=") && token.getValue().equals("=")) {
+                tokens.removeLast();
+                tokens.add(new Token(TokenType.BOOLEAN_OPERATOR, "=="));
+            } else {
+                tokens.add(token);
+            }
+        }
+        return tokens;
     }
 
     private static void addToken(TokenizerContext ctx, TokenType tokenType) {
