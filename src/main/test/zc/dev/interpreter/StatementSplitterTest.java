@@ -49,8 +49,6 @@ class StatementSplitterTest {
         assert Token.toString(statements.get(2).getTokens()).equals("b > 0 || $v7 > 0 || $v8");
     }
 
-
-
     @Test
     @DisplayName("a % 2 == 0")
     public void modWithBooleanExpression() {
