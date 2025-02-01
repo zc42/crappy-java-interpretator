@@ -8,11 +8,12 @@ import zc.dev.interpreter.lexer.TokenType;
 
 import java.util.*;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 public class BooleanExpressionParser {
 
-    private static final Map<String, BiFunction<Expression<Boolean>, Expression<Boolean>, Expression<Boolean>>> operationFunctionMap1 = getOperationFunctionMap1();
-    private static final Map<String, BiFunction<Expression<Double>, Expression<Double>, Expression<Boolean>>> operationFunctionMap2 = getOperationFunctionMap();
+    private static final Map<String, BiFunction<Expression<?>, Expression<?>, Expression<Boolean>>> operationFunctionMap1 = getOperationFunctionMap1();
+    private static final Map<String, BiFunction<Expression<?>, Expression<?>, Expression<Boolean>>> operationFunctionMap2 = getOperationFunctionMap();
 
     public static Expression<Boolean> parse(CallStackFrame frame, List<Token> tokens) {
 
@@ -43,40 +44,44 @@ public class BooleanExpressionParser {
         }
     }
 
-    private static Map<String, BiFunction<Expression<Boolean>, Expression<Boolean>, Expression<Boolean>>> getOperationFunctionMap1() {
-        Map<String, BiFunction<Expression<Boolean>, Expression<Boolean>, Expression<Boolean>>> map = new HashMap<>();
-        map.put("&&", AndExpression::new);
-        map.put("||", OrExpression::new);
-        map.put("==", IsEqualNumericExpression::new);
-
-//        map.put("!", NotExpression::new);
-
+    private static Map<String, BiFunction<Expression<?>, Expression<?>, Expression<Boolean>>> getOperationFunctionMap1() {
+        Map<String, BiFunction<Expression<?>, Expression<?>, Expression<Boolean>>> map = new HashMap<>();
+        map.put("&&", getBooleanExpression((b1, b2) -> b1 && b2));
+        map.put("||", getBooleanExpression((b1, b2) -> b1 || b2));
+        map.put("==", getBooleanExpression((b1, b2) -> b1 == b2));
+        map.put("!=", getBooleanExpression((b1, b2) -> b1 != b2));
         return map;
     }
 
-    private static Map<String, BiFunction<Expression<Double>, Expression<Double>, Expression<Boolean>>> getOperationFunctionMap() {
-        Map<String, BiFunction<Expression<Double>, Expression<Double>, Expression<Boolean>>> map = new HashMap<>();
-        map.put(">", IsGreaterExpression::new);
-        map.put("<", IsLessExpression::new);
-        map.put(">=", IsGreaterOrEqualExpression::new);
-        map.put("<=", IsLessOrEqualExpression::new);
-        map.put("==", IsEqualExpression::new);
+    private static Map<String, BiFunction<Expression<?>, Expression<?>, Expression<Boolean>>> getOperationFunctionMap() {
+        Map<String, BiFunction<Expression<?>, Expression<?>, Expression<Boolean>>> map = new HashMap<>();
+        map.put(">", getBooleanNumericExpression((d1, d2) -> d1 > d2));
+        map.put("<", getBooleanNumericExpression((d1, d2) -> d1 < d2));
+        map.put(">=", getBooleanNumericExpression((d1, d2) -> d1 >= d2));
+        map.put("<=", getBooleanNumericExpression((d1, d2) -> d1 <= d2));
+        map.put("==", getBooleanNumericExpression(Double::equals));
+        map.put("!=", getBooleanNumericExpression((d1, d2) -> !d1.equals(d2)));
         return map;
+    }
+
+    private static BiFunction<Expression<?>, Expression<?>, Expression<Boolean>> getBooleanExpression
+            (BiFunction<Boolean, Boolean, Boolean> function) {
+        return (left, right) -> new BooleanExpression(left, right, function);
+    }
+
+    private static BiFunction<Expression<?>, Expression<?>, Expression<Boolean>> getBooleanNumericExpression
+            (BiFunction<Double, Double, Boolean> function) {
+        return (left, right) -> new BooleanNumericExpression(left, right, function);
     }
 
     private static Expression<?> getOperationExpression(Stack<Expression<?>> stack, Token token) {
         String value = token.getValue();
-        if (Objects.equals(value, "!")) {
-            Expression<Boolean> expression = (Expression<Boolean>) stack.pop();
-            return new NotExpression(expression);
-        }
+        if (Objects.equals(value, "!")) return new NotExpression(stack.pop());
+
         Expression<?> right = stack.pop();
         Expression<?> left = stack.pop();
-        if (right instanceof NumberExpression && operationFunctionMap2.containsKey(value))
-            return operationFunctionMap2.get(value).apply((Expression<Double>) left, (Expression<Double>) right);
-        else if (operationFunctionMap1.containsKey(value))
-            return operationFunctionMap1.get(value).apply((Expression<Boolean>) left, (Expression<Boolean>) right);
+        if (operationFunctionMap2.containsKey(value)) return operationFunctionMap2.get(value).apply(left, right);
+        else if (operationFunctionMap1.containsKey(value)) return operationFunctionMap1.get(value).apply(left, right);
         throw new RuntimeException("Unknown operator: " + value);
-
     }
 }

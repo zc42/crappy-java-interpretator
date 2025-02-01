@@ -14,7 +14,7 @@ import java.util.function.BiFunction;
 // Parser to convert input string into an expression tree
 public class ArithmeticExpressionParser {
 
-    private static final Map<String, BiFunction<Expression<Double>, Expression<Double>, Expression<Double>>> OPERATION_FUNCTION_MAP = getOperationFunctionMap();
+    private static final Map<String, BiFunction<Expression<?>, Expression<?>, Expression<Double>>> OPERATION_FUNCTION_MAP = getOperationFunctionMap();
 
     public static Expression<Double> parse(CallStackFrame frame, List<Token> tokens) {
 
@@ -43,28 +43,28 @@ public class ArithmeticExpressionParser {
             NumberExpression expression = new NumberExpression(v);
             stack.push(expression);
         } else if (token.getType() == TokenType.IDENTIFIER) {
-                Object o = frame.getVariableValue(token.getValue());
-                double v = o.getClass() == String.class
-                        ? Double.parseDouble(o.toString())
-                        : (double) o;
-                NumberExpression expression = new NumberExpression(v);
-                stack.push(expression);
+            Object o = frame.getVariableValue(token.getValue());
+            double v = o.getClass() == String.class
+                    ? Double.parseDouble(o.toString())
+                    : (double) o;
+            NumberExpression expression = new NumberExpression(v);
+            stack.push(expression);
         }
     }
 
-    private static  Map<String, BiFunction<Expression<Double>, Expression<Double>, Expression<Double>>> getOperationFunctionMap() {
-        Map<String, BiFunction<Expression<Double>, Expression<Double>, Expression<Double>>> map = new HashMap<>();
-        map.put("+", AdditionExpression::new);
-        map.put("-", SubtractionExpression::new);
-        map.put("*", MultiplicationExpression::new);
-        map.put("/", DivisionExpression::new);
-        map.put("%", ModExpression::new);
+    private static Map<String, BiFunction<Expression<?>, Expression<?>, Expression<Double>>> getOperationFunctionMap() {
+        Map<String, BiFunction<Expression<?>, Expression<?>, Expression<Double>>> map = new HashMap<>();
+        map.put("+", (e1, e2) -> new ArithmeticExpression(e1, e2, Double::sum));
+        map.put("-", (e1, e2) -> new ArithmeticExpression(e1, e2, (d1, d2) -> d1 - d2));
+        map.put("*", (e1, e2) -> new ArithmeticExpression(e1, e2, (d1, d2) -> d1 * d2));
+        map.put("/", (e1, e2) -> new ArithmeticExpression(e1, e2, (d1, d2) -> d1 / d2));
+        map.put("%", (e1, e2) -> new ArithmeticExpression(e1, e2, (d1, d2) -> d1 % d2));
         return map;
     }
 
     private static Expression<Double> getArithmeticOperationExpression(Stack<Expression<Double>> stack, Token token) {
-        Expression<Double> right = stack.pop();
-        Expression<Double> left = stack.pop();
+        Expression<?> right = stack.pop();
+        Expression<?> left = stack.pop();
         String value = token.getValue();
         if (!ArithmeticExpressionParser.OPERATION_FUNCTION_MAP.containsKey(value))
             throw new RuntimeException("Unknown operator: " + value);
