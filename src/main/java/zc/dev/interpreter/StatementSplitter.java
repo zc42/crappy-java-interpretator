@@ -278,6 +278,10 @@ public class StatementSplitter {
 
     private static int systemVariableNb;
 
+    public static void resetSystemVariableNb() {
+        systemVariableNb = 0;
+    }
+
     private static void addSystemVariableAssignment(Statement statement) {
         //todo: get type token from function or from expression or from stackFrame
         List<Token> result = new ArrayList<>();
