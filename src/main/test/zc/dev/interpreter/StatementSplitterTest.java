@@ -10,7 +10,7 @@ class StatementSplitterTest {
 
     @Test
     @DisplayName("int c = a ( b + 1 , a ( 1 , 2 ) ) + 1")
-    public void test0() {
+    void functionsCallWithArithmeticOperation() {
         String line = "int c = a ( b + 1 , a ( 1 , 2 ) ) + 1";
 
         List<Statement> statements = StatementSplitter.split(line);
@@ -24,7 +24,7 @@ class StatementSplitterTest {
 
     @Test
     @DisplayName("b = 1 + a(a + 1, a(1, 2))")
-    public void test1() {
+    void arithmeticOperationWithFunctionCalls() {
         String line = "b = 1 + a(a + 1, a(1, 2))";
 
         List<Statement> statements = StatementSplitter.split(line);
@@ -38,7 +38,7 @@ class StatementSplitterTest {
 
     @Test
     @DisplayName("b > 0 || b + 1 > 0 || a(1)")
-    public void test2() {
+    void booleanAndArithmeticOperationsWithsFunctionCall() {
         String line = "b > 0 || b + 1 > 0 || a(1)";
 
         List<Statement> statements = StatementSplitter.split(line);
@@ -51,7 +51,7 @@ class StatementSplitterTest {
 
     @Test
     @DisplayName("a % 2 == 0")
-    public void modWithBooleanExpression() {
+    void modWithBooleanExpression() {
         String line = "boolean c = a % 2 == 0";
 
         List<Statement> statements = StatementSplitter.split(line);
@@ -63,7 +63,7 @@ class StatementSplitterTest {
 
     @Test
     @DisplayName("0 == a % 2")
-    public void booleanExpressionWithMod() {
+    void booleanExpressionWithMod() {
         String line = "boolean c = 0 == a % 2";
 
         List<Statement> statements = StatementSplitter.split(line);
