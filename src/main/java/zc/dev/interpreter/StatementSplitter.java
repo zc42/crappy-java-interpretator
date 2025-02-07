@@ -1,12 +1,13 @@
 package zc.dev.interpreter;
 
+import lombok.Builder;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import zc.dev.interpreter.lexer.LexerWithFSA;
 import zc.dev.interpreter.lexer.Token;
 import zc.dev.interpreter.lexer.TokenType;
 import zc.dev.interpreter.tree_parser.NodeType;
 import zc.dev.interpreter.tree_parser.ParseTreeNode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import zc.dev.interpreter.tree_parser.StatementDecomposer;
 
 import java.text.MessageFormat;
@@ -18,6 +19,7 @@ import java.util.stream.IntStream;
 import static zc.dev.interpreter.Utils.prnt;
 
 public class StatementSplitter {
+    private int systemVariableNb;
 
     public static void main(String[] args) {
         List<String> lines = List.of(
@@ -28,10 +30,11 @@ public class StatementSplitter {
                 "boolean c = 0==a%2"
         );
 
-        lines.forEach(StatementSplitter::split);
+        StatementSplitter splitter = new StatementSplitter();
+        lines.forEach(splitter::split);
     }
 
-    public static List<Statement> split(String line) {
+    public List<Statement> split(String line) {
         List<Token> tokens = LexerWithFSA.tokenize(line);
         Token.prntTokens(tokens);
         List<Statement> statements = split(tokens);
@@ -39,7 +42,7 @@ public class StatementSplitter {
         return statements;
     }
 
-    public static List<Statement> split(ParseTreeNode node) {
+    public List<Statement> split(ParseTreeNode node) {
         List<Token> tokens = node.getTokens();
         StatementActions actions = StatementActions.main(node);
         boolean nodeWithPredicate = StatementDecomposer.isPredicateNode(node.getNodeType());
@@ -56,7 +59,7 @@ public class StatementSplitter {
         return split(tokens);
     }
 
-    private static List<Statement> split(List<Token> tokens) {
+    private List<Statement> split(List<Token> tokens) {
         tokens = Token.removeSemicolon(tokens);
 
         Stack<Statement> stack = new Stack<>();
@@ -76,7 +79,7 @@ public class StatementSplitter {
         }
 
         return result.stream()
-                .map(StatementSplitter::splitFunctionArguments)
+                .map(this::splitFunctionArguments)
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
     }
@@ -109,76 +112,24 @@ public class StatementSplitter {
         }
     }
 
-    private static Optional<Statement> getStatement(Stack<Statement> stack, List<Token> tokens, int index) {
+    private Optional<Statement> getStatement(Stack<Statement> stack, List<Token> tokens, int index) {
 
-//        Token.prntTokens(tokens);
-
+        AA.BB bb = AA.getData(stack, tokens, index);
         Token token = tokens.get(index);
-        if (Objects.equals(token.getValue(), "==")) {
-            token = token;
-        }
-//        Token prevToken = index - 1 >= 0 ? tokens.get(index - 1) : null;
-//        Token nextToken = index + 1 < tokens.size() ? tokens.get(index + 1) : null;
-
-        TokenPredicate functionPredicate1 = TokenPredicate.from(0, e -> e.getType() == TokenType.IDENTIFIER);
-        TokenPredicate functionPredicate2 = TokenPredicate.from(1, e -> e.getValue().equals("("));
-
-        TokenPredicate arithmeticPredicate1 = TokenPredicate.from(-1, e -> e.getType() == TokenType.ARITHMETIC_OPERATOR);
-        TokenPredicate arithmeticPredicate2 = TokenPredicate.from(0, e -> e.getValue().equals("("));
-
-        TokenPredicate arithmeticPredicate3 = TokenPredicate.from(0, e -> e.getType() == TokenType.IDENTIFIER || e.getType() == TokenType.NUMBER);
-        TokenPredicate arithmeticPredicate4 = TokenPredicate.from(1, e -> e.getType() == TokenType.ARITHMETIC_OPERATOR);
-
-        TokenPredicate arithmeticTermPredicate1 = TokenPredicate.from(-1, e -> e.getType() == TokenType.ARITHMETIC_OPERATOR);
-        TokenPredicate arithmeticTermPredicate2 = TokenPredicate.from(0, e -> e.getType() == TokenType.IDENTIFIER || e.getType() == TokenType.NUMBER);
-        TokenPredicate arithmeticTermPredicate3 = TokenPredicate.from(1, e -> e.getType() != TokenType.ARITHMETIC_OPERATOR);
-
-        TokenPredicate arithmeticTermPredicate11 = TokenPredicate.from(-2, e -> e.getType() == TokenType.IDENTIFIER || e.getType() == TokenType.NUMBER);
-        TokenPredicate arithmeticTermPredicate12 = TokenPredicate.from(-1, e -> e.getType() == TokenType.ARITHMETIC_OPERATOR);
-        TokenPredicate arithmeticTermPredicate13 = TokenPredicate.from(0, e -> e.getType() == TokenType.IDENTIFIER || e.getType() == TokenType.NUMBER);
-
-//        TokenPredicate booleanPredicate1 = TokenPredicate.from(0, e -> e.getType() == TokenType.IDENTIFIER || e.getType() == TokenType.NUMBER);
-        TokenPredicate booleanPredicate2 = TokenPredicate.from(0, e -> e.getType() == TokenType.BOOLEAN_OPERATOR);
-
-        TokenPredicate terminalPredicate = TokenPredicate.from(0, e -> e.getValue().equals(")"));
-        TokenPredicate nextCommaPredicate = TokenPredicate.from(1, e -> e.getType() == TokenType.COMMA);
-
-        TokenTester tokenTester = TokenTester.from(tokens, index);
-
-        Statement statement = stack.isEmpty() ? null : stack.peek();
-        boolean isFunctionCall = tokenTester.testToken(functionPredicate1, functionPredicate2);
-        boolean isArithmeticExpression = tokenTester.testToken(arithmeticPredicate1, arithmeticPredicate2)
-                || tokenTester.testToken(arithmeticPredicate3, arithmeticPredicate4);
-        boolean isBooleanExpression = tokenTester.testToken(booleanPredicate2);
-        boolean isTerminal = tokenTester.testToken(terminalPredicate)
-
-                || (tokenTester.testToken(nextCommaPredicate)
-                && statement != null
-                && (statement.getType() == NodeType.ArithmeticExpressionStatement
-                || statement.getType() == NodeType.BooleanExpressionStatement))
-
-                || (stack.size() > 1
-                && statement != null
-                && statement.getType() != getNodeType(isFunctionCall, isArithmeticExpression, isBooleanExpression)
-                && NodeType.UNKNOWN != getNodeType(isFunctionCall, isArithmeticExpression, isBooleanExpression))
-
-                || tokenTester.testToken(arithmeticTermPredicate1, arithmeticTermPredicate2, arithmeticTermPredicate3)
-                || tokenTester.testToken(arithmeticTermPredicate11, arithmeticTermPredicate12, arithmeticTermPredicate13)
-                && index == tokens.size() - 1;
-
-
         if (stack.isEmpty()) {
-            NodeType statementType = getNodeType(isFunctionCall, isArithmeticExpression, isBooleanExpression);
-            stack.push(Statement.from(statementType));
+            Statement statement = Statement.of(bb.nodeType, List.of(token));
+            stack.push(statement);
+            return Optional.empty();
         }
-        statement = stack.peek();
 
-        if (isFunctionCall) {
+        Statement statement = stack.peek();
+
+        if (bb.isFunctionCall) {
             statement = Statement.from(NodeType.FunctionCallStatement);
             statement.addToken(token);
             stack.push(statement);
-        } else if (isArithmeticExpression || isBooleanExpression) {
-            NodeType newStatementType = getNodeType(isFunctionCall, isArithmeticExpression, isBooleanExpression);
+        } else if (bb.isArithmeticExpression || bb.isBooleanExpression) {
+            NodeType newStatementType = bb.nodeType;
             if (statement.getType() == NodeType.UNKNOWN || statement.getType() == newStatementType) {
                 statement.addToken(token);
                 statement.setType(newStatementType);
@@ -187,10 +138,10 @@ public class StatementSplitter {
                 statement.addToken(token);
                 stack.push(statement);
             }
-        } else if (isTerminal) {// && !isLastToken) {
+        } else if (bb.isTerminal) {// && !isLastToken) {
             statement.addToken(token);
             Statement popped = stack.pop();
-            if (stack.isEmpty()) return Optional.empty();
+            if (stack.isEmpty()) return Optional.of(popped);
             addSystemVariableAssignment(popped);
             Token variableToken = popped.getToken(1);
             stack.peek().addToken(variableToken);
@@ -200,7 +151,123 @@ public class StatementSplitter {
         return Optional.empty();
     }
 
-    private static NodeType getNodeType(StatementActions actions) {
+    static public class AA {
+
+        @Getter
+        @Builder(toBuilder = true)
+        static public class BB {
+            private final boolean isFunctionCall;
+            private final boolean isArithmeticExpression;
+            private final boolean isBooleanExpression;
+            private final boolean isTerminal;
+            private final NodeType nodeType;
+        }
+
+        public static BB getData(Stack<Statement> stack, List<Token> tokens, int index) {
+            TokenTester tokenTester = TokenTester.from(tokens, index);
+            boolean isFunctionCall = isIsFunctionCall(tokenTester);
+            boolean isArithmeticExpression = isIsArithmeticExpression(tokenTester);
+            boolean isBooleanExpression = isIsBooleanExpression(tokenTester);
+            NodeType nodeType = index == 0
+                    ? getNodeTypeForFirstToken(tokenTester, tokens)
+                    : getNodeType(isFunctionCall, isArithmeticExpression, isBooleanExpression);
+            boolean isTerminal = AA.isTerminal(stack, tokens, index, tokenTester, nodeType);
+
+            return BB.builder()
+                    .isFunctionCall(isFunctionCall)
+                    .isArithmeticExpression(isArithmeticExpression)
+                    .isBooleanExpression(isBooleanExpression)
+                    .isTerminal(isTerminal)
+                    .nodeType(nodeType)
+                    .build();
+        }
+
+        private static NodeType getNodeTypeForFirstToken(TokenTester tokenTester, List<Token> tokens) {
+
+            TokenPredicate isIdentifier = TokenPredicate.from(0, e -> e.getType() == TokenType.IDENTIFIER);
+            TokenPredicate isOpenParentheses = TokenPredicate.from(1, e -> e.getValue().equals("("));
+            boolean beginsWithFunctionCall = tokenTester.testToken(isIdentifier, isOpenParentheses);
+
+            StatementActions actions = StatementActions.from(tokens);
+            if (beginsWithFunctionCall) return NodeType.FunctionCallStatement;
+            else if (actions.isBooleanOperation()) return NodeType.BooleanExpressionStatement;
+            else if (actions.isArithmeticOperation()) return NodeType.ArithmeticExpressionStatement;
+            else if (actions.isCallFunction()) return NodeType.FunctionCallStatement;
+            throw new RuntimeException("getNodeTypeForFirstToken unsuported actions combination: " + actions);
+        }
+
+        private static boolean isTerminal(Stack<Statement> stack, List<Token> tokens, int index, TokenTester tokenTester, NodeType nodeType) {
+            boolean isArithmeticTerminal1 = isIsArithmeticTerminal1(tokenTester);
+            boolean isArithmeticTerminal2 = isIsArithmeticTerminal2(tokens, index, tokenTester);
+            boolean isClosingParentheses = isIsClosingParentheses(tokenTester);
+            boolean isArithmeticOrBooleanOperationAndNextIsComma = isIsArithmeticOrBooleanOperationAndNextIsComma(stack, tokenTester);
+            boolean isDifferentNodeType = isIsDifferentNodeType(stack, nodeType);
+
+            return isClosingParentheses
+                    || isArithmeticOrBooleanOperationAndNextIsComma
+                    || isDifferentNodeType
+                    || isArithmeticTerminal1
+                    || isArithmeticTerminal2;
+        }
+
+        private static boolean isIsDifferentNodeType(Stack<Statement> stack, NodeType nodeType) {
+            Statement statement = stack.isEmpty() ? null : stack.peek();
+            return stack.size() > 1
+                    && statement != null
+                    && statement.getType() != nodeType
+                    && NodeType.UNKNOWN != nodeType;
+        }
+
+        private static boolean isIsArithmeticTerminal2(List<Token> tokens, int index, TokenTester tokenTester) {
+            TokenPredicate arithmeticTermPredicate11 = TokenPredicate.from(-2, e -> e.getType() == TokenType.IDENTIFIER || e.getType() == TokenType.NUMBER);
+            TokenPredicate arithmeticTermPredicate12 = TokenPredicate.from(-1, e -> e.getType() == TokenType.ARITHMETIC_OPERATOR);
+            TokenPredicate arithmeticTermPredicate13 = TokenPredicate.from(0, e -> e.getType() == TokenType.IDENTIFIER || e.getType() == TokenType.NUMBER);
+            return tokenTester.testToken(arithmeticTermPredicate11, arithmeticTermPredicate12, arithmeticTermPredicate13)
+                    && index == tokens.size() - 1;
+        }
+
+        private static boolean isIsArithmeticTerminal1(TokenTester tokenTester) {
+            TokenPredicate arithmeticTermPredicate1 = TokenPredicate.from(-1, e -> e.getType() == TokenType.ARITHMETIC_OPERATOR);
+            TokenPredicate arithmeticTermPredicate2 = TokenPredicate.from(0, e -> e.getType() == TokenType.IDENTIFIER || e.getType() == TokenType.NUMBER);
+            TokenPredicate arithmeticTermPredicate3 = TokenPredicate.from(1, e -> e.getType() != TokenType.ARITHMETIC_OPERATOR);
+            return tokenTester.testToken(arithmeticTermPredicate1, arithmeticTermPredicate2, arithmeticTermPredicate3);
+        }
+
+        private static boolean isIsArithmeticOrBooleanOperationAndNextIsComma(Stack<Statement> stack, TokenTester tokenTester) {
+            Statement statement = stack.isEmpty() ? null : stack.peek();
+            TokenPredicate nextCommaPredicate = TokenPredicate.from(1, e -> e.getType() == TokenType.COMMA);
+            return tokenTester.testToken(nextCommaPredicate)
+                    && statement != null
+                    && (statement.getType() == NodeType.ArithmeticExpressionStatement
+                    || statement.getType() == NodeType.BooleanExpressionStatement);
+        }
+
+        private static boolean isIsClosingParentheses(TokenTester tokenTester) {
+            TokenPredicate terminalPredicate = TokenPredicate.from(0, e -> e.getValue().equals(")"));
+            return tokenTester.testToken(terminalPredicate);
+        }
+    }
+
+    private static boolean isIsBooleanExpression(TokenTester tokenTester) {
+        TokenPredicate booleanPredicate2 = TokenPredicate.from(0, e -> e.getType() == TokenType.BOOLEAN_OPERATOR);
+        return tokenTester.testToken(booleanPredicate2);
+    }
+
+    private static boolean isIsArithmeticExpression(TokenTester tokenTester) {
+        TokenPredicate arithmeticPredicate1 = TokenPredicate.from(-1, e -> e.getType() == TokenType.ARITHMETIC_OPERATOR);
+        TokenPredicate arithmeticPredicate2 = TokenPredicate.from(0, e -> e.getValue().equals("("));
+        TokenPredicate arithmeticPredicate3 = TokenPredicate.from(0, e -> e.getType() == TokenType.IDENTIFIER || e.getType() == TokenType.NUMBER);
+        TokenPredicate arithmeticPredicate4 = TokenPredicate.from(1, e -> e.getType() == TokenType.ARITHMETIC_OPERATOR);
+        return tokenTester.testToken(arithmeticPredicate1, arithmeticPredicate2) || tokenTester.testToken(arithmeticPredicate3, arithmeticPredicate4);
+    }
+
+    private static boolean isIsFunctionCall(TokenTester tokenTester) {
+        TokenPredicate functionPredicate1 = TokenPredicate.from(0, e -> e.getType() == TokenType.IDENTIFIER);
+        TokenPredicate functionPredicate2 = TokenPredicate.from(1, e -> e.getValue().equals("("));
+        return tokenTester.testToken(functionPredicate1, functionPredicate2);
+    }
+
+    private NodeType getNodeType(StatementActions actions) {
         return actions.isCallFunction()
                 ? NodeType.FunctionCallStatement
                 : actions.isArithmeticOperation()
@@ -210,7 +277,7 @@ public class StatementSplitter {
                 : NodeType.UNKNOWN;
     }
 
-    private static NodeType getNodeType(boolean isFunctionCall, boolean isArithmeticExpression, boolean isBooleanExpression) {
+    public static NodeType getNodeType(boolean isFunctionCall, boolean isArithmeticExpression, boolean isBooleanExpression) {
         return isFunctionCall
                 ? NodeType.FunctionCallStatement
                 : isArithmeticExpression
@@ -220,7 +287,7 @@ public class StatementSplitter {
                 : NodeType.UNKNOWN;
     }
 
-    private static List<Statement> splitFunctionArguments(Statement statement) {
+    private List<Statement> splitFunctionArguments(Statement statement) {
         if (statement.getType() != NodeType.FunctionCallStatement) return List.of(statement);
 
         List<Token> tokens = statement.getTokens();
@@ -276,13 +343,8 @@ public class StatementSplitter {
         return result;
     }
 
-    private static int systemVariableNb;
 
-    public static void resetSystemVariableNb() {
-        systemVariableNb = 0;
-    }
-
-    private static void addSystemVariableAssignment(Statement statement) {
+    private void addSystemVariableAssignment(Statement statement) {
         //todo: get type token from function or from expression or from stackFrame
         List<Token> result = new ArrayList<>();
         result.add(new Token(TokenType.TYPE, "int")); // todo: fix ..

@@ -10,17 +10,18 @@ import java.util.Stack;
 public class StatementDecomposer {
 
     public static void decomposeStatements(ParseTreeNode root) {
+        StatementSplitter splitter = new StatementSplitter();
         Stack<ParseTreeNode> stack = new Stack<>();
         stack.push(root);
         while (!stack.isEmpty()) {
             ParseTreeNode node = stack.pop();
             node.getChildren().forEach(stack::push);
-            getDecomposedStatements(node);
+            getDecomposedStatements(node, splitter);
         }
     }
 
-    private static void getDecomposedStatements(ParseTreeNode node) {
-        List<Statement> statements = StatementSplitter.split(node);
+    private static void getDecomposedStatements(ParseTreeNode node, StatementSplitter splitter) {
+        List<Statement> statements = splitter.split(node);
         NodeType nodeType = node.getNodeType();
         boolean predicateNode = isPredicateNode(nodeType);
         if (!predicateNode && statements.size() == 1) return;
