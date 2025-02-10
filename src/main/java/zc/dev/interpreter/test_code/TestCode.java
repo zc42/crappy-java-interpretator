@@ -9,10 +9,10 @@ public class TestCode {
         private int level = 0;
 
         public A getChild() {
-            A a1 = a == null ? new A() : a;
-            a1.level = level + 1;
-            prnt(a1.level);
-            return a1;
+            a = a == null ? new A() : a;
+            a.level = level + 1;
+            prnt(a.level);
+            return a;
         }
     }
 
