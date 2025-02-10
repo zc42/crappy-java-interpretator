@@ -4,6 +4,18 @@ import static zc.dev.interpreter.Utils.prnt;
 
 public class TestCode {
 
+    public static class A {
+        private A a;
+        private int level = 0;
+
+        public A getChild() {
+            A a1 = a == null ? new A() : a;
+            a1.level = level + 1;
+            prnt(a1.level);
+            return a1;
+        }
+    }
+
     public static void main(String[] args) {
         int a = 1 + 2;
         int b = 1 + a(a + 1, a(1, 2));
@@ -27,6 +39,7 @@ public class TestCode {
             else prnt("else ..");
         }
         prnt("done");
+        A x = new A().getChild().getChild().getChild().getChild();
     }
 
     private static int a(int a, int b) {

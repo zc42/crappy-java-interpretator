@@ -10,6 +10,14 @@ import java.util.Stack;
 public class StatementDecomposer {
 
     public static void decomposeStatements(TreeNode root) {
+        splitStatementsByDot(root);
+        splitStatements(root);
+    }
+
+    private static void splitStatementsByDot(TreeNode root) {
+    }
+
+    private static void splitStatements(TreeNode root) {
         StatementSplitter splitter = new StatementSplitter();
         Stack<TreeNode> stack = new Stack<>();
         stack.push(root);
@@ -22,6 +30,10 @@ public class StatementDecomposer {
 
     private static void getDecomposedStatements(TreeNode node, StatementSplitter splitter) {
         List<TreeNode> statements = splitter.split(node);
+        makePredicateNodeFirstChild(node, statements);
+    }
+
+    private static void makePredicateNodeFirstChild(TreeNode node, List<TreeNode> statements) {
         NodeType nodeType = node.getType();
         boolean predicateNode = isPredicateNode(nodeType);
         if (!predicateNode && statements.size() == 1) return;
