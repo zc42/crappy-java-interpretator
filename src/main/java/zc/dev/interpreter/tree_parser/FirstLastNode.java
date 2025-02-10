@@ -8,6 +8,6 @@ import lombok.ToString;
 @ToString
 @RequiredArgsConstructor(staticName = "from")
 public class FirstLastNode {
-    private final ParseTreeNode firstNode;
-    private final ParseTreeNode lastNode;
+    private final TreeNode firstNode;
+    private final TreeNode lastNode;
 }

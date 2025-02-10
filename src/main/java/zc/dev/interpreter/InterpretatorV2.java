@@ -8,7 +8,7 @@ import zc.dev.interpreter.lexer.Token;
 import zc.dev.interpreter.lexer.TokenType;
 import zc.dev.interpreter.tree_parser.CustomCodeParser;
 import zc.dev.interpreter.tree_parser.NodeType;
-import zc.dev.interpreter.tree_parser.ParseTreeNode;
+import zc.dev.interpreter.tree_parser.TreeNode;
 import zc.dev.interpreter.tree_parser.ParseTreeNodeUtils;
 
 import java.text.MessageFormat;
@@ -27,11 +27,11 @@ public class InterpretatorV2 {
 
     public static void main(String[] args) {
         String code = getCode();
-        ParseTreeNode rootNode = CustomCodeParser.parseCode(code);
+        TreeNode rootNode = CustomCodeParser.parseCode(code);
         if (rootNode == null) throw new RuntimeException("rootNode == null");
 
         rootNode.printTree();
-        ParseTreeNode entryPointNode = ParseTreeNodeUtils.findEntryPoint(rootNode).orElseThrow(() -> new RuntimeException("No entry point found"));
+        TreeNode entryPointNode = ParseTreeNodeUtils.findEntryPoint(rootNode).orElseThrow(() -> new RuntimeException("No entry point found"));
         entryPointNode.printTree();
 
         InterpreterContext ctx = InterpreterContext.from(rootNode);
@@ -44,7 +44,7 @@ public class InterpretatorV2 {
         Stack<CallStackFrame> callStack = ctx.getCallStack();
         for (int i = 0; i < nbOfCycleToRun; i++) {
             CallStackFrame frame = callStack.peek();
-            Optional<ParseTreeNode> nodeOptional = frame.getCurrentExecutableNode();
+            Optional<TreeNode> nodeOptional = frame.getCurrentExecutableNode();
             if (nodeOptional.isPresent()) nodeOptional.ifPresent(e -> executeDecomposedStatement(ctx, e));
             else popCallStackFrame(callStack);
             if (callStack.isEmpty()) break;
@@ -59,14 +59,14 @@ public class InterpretatorV2 {
         lastFrame.getTempValue().ifPresent(frame::setTempValue);
     }
 
-    private static void executeDecomposedStatement(InterpreterContext ctx, ParseTreeNode node) {
+    private static void executeDecomposedStatement(InterpreterContext ctx, TreeNode node) {
         CallStackFrame frame = ctx.getCurrentCallStackFrame();
 
         List<Token> tokens = node.getTokens();
         StatementActions statementActions = frame.getCurrentExecutableNodeActions();
         prnt(statementActions);
 
-        if (node.getNodeType() == NodeType.GOTO) executeGoToStatement(frame, node);
+        if (node.getType() == NodeType.GOTO) executeGoToStatement(frame, node);
         else if (statementActions.isPushControlBlock()) frame.pushControlBlock();
         else if (statementActions.isCallFunction()) executeCallFunctionStatement(ctx, tokens);
         else if (statementActions.isArithmeticOperation()) executeArithmeticOperationStatement(tokens, frame);
@@ -79,7 +79,7 @@ public class InterpretatorV2 {
         prnt("----------");
     }
 
-    private static void executeGoToStatement(CallStackFrame frame, ParseTreeNode node) {
+    private static void executeGoToStatement(CallStackFrame frame, TreeNode node) {
         prnt("goto statement " + node);
 
         TokenType tokenType = node.getTokens().get(0).getType();
@@ -108,7 +108,7 @@ public class InterpretatorV2 {
         CallStackFrame frame = callStack.peek();
         prnt("function call ended, return value: " + frame.getTempValue());
 
-        ParseTreeNode node = frame.getCurrentExecutableNode().orElseThrow();
+        TreeNode node = frame.getCurrentExecutableNode().orElseThrow();
         StatementActions nodeStatementActions = node.getStatementActions();
         boolean isTempValueAssigned = nodeStatementActions.isCallFunction()
                 || nodeStatementActions.isArithmeticOperation()
@@ -181,17 +181,17 @@ public class InterpretatorV2 {
         prnt("calling function: " + Token.toString(tokens));
         CallStackFrame frame = ctx.getCallStack().peek();
         //=====for debug========
-        Optional<ParseTreeNode> option = findFunctionNode(ctx, tokens);
+        Optional<TreeNode> option = findFunctionNode(ctx, tokens);
         if (option.isEmpty()) {
             findFunctionNode(ctx, tokens);
         }
         //=============
 
-        ParseTreeNode functionNode = findFunctionNode(ctx, tokens)
+        TreeNode functionNode = findFunctionNode(ctx, tokens)
                 .orElseThrow(() -> new RuntimeException("No function declaration was found:\n" + Token.toString(tokens)));
 
         Object[] argumentValues = getArguments(frame, tokens);
-        if (functionNode.getNodeType() == NodeType.SystemFunction) {
+        if (functionNode.getType() == NodeType.SystemFunction) {
             callSystemFunction(frame, functionNode, argumentValues).ifPresent(frame::setTempValue);
         } else {
             ctx.createCallStackFrame(functionNode, argumentValues);
@@ -230,33 +230,33 @@ public class InterpretatorV2 {
                 .collect(Collectors.toList());
     }
 
-    private static Optional<ParseTreeNode> findFunctionNode(InterpreterContext ctx, List<Token> functionCallTokens) {
+    private static Optional<TreeNode> findFunctionNode(InterpreterContext ctx, List<Token> functionCallTokens) {
         CallStackFrame frame = ctx.getCurrentCallStackFrame();
-        Optional<ParseTreeNode> systemFunctionOption = findSystemFunction(frame, functionCallTokens);
+        Optional<TreeNode> systemFunctionOption = findSystemFunction(frame, functionCallTokens);
         if (systemFunctionOption.isPresent()) return systemFunctionOption;
 
-        ParseTreeNode node = findParentClassNode(ctx);
+        TreeNode node = findParentClassNode(ctx);
         return node.getChildren().stream()
-                .filter(e -> e.getNodeType() == NodeType.CodeBlock)
-                .map(ParseTreeNode::getChildren)
+                .filter(e -> e.getType() == NodeType.CodeBlock)
+                .map(TreeNode::getChildren)
                 .flatMap(Collection::stream)
-                .filter(e -> e.getNodeType() == NodeType.FunctionDeclarationStatement)
+                .filter(e -> e.getType() == NodeType.FunctionDeclarationStatement)
                 .filter(e -> isSameFunction(frame, e.getTokens(), functionCallTokens)) //todo: change arg names to arg types
                 .findFirst();
     }
 
-    private static Optional<ParseTreeNode> findSystemFunction(CallStackFrame frame, List<Token> functionCallTokens) {
+    private static Optional<TreeNode> findSystemFunction(CallStackFrame frame, List<Token> functionCallTokens) {
         FunctionDeclarationFilter filter = FunctionDeclarationFilter.from(frame, functionCallTokens);
         String name = filter.getName().getValue();
         List<Token> argumentTypes = filter.getArgumentTypes();
         if (name.equals("prnt") && argumentTypes.size() == 1) {
-            ParseTreeNode node = new ParseTreeNode(NodeType.SystemFunction, functionCallTokens);
+            TreeNode node = new TreeNode(NodeType.SystemFunction, functionCallTokens);
             return Optional.of(node);
         }
         return Optional.empty();
     }
 
-    private static Optional<Object> callSystemFunction(CallStackFrame frame, ParseTreeNode functionNode, Object[] argumentValues) {
+    private static Optional<Object> callSystemFunction(CallStackFrame frame, TreeNode functionNode, Object[] argumentValues) {
         FunctionDeclarationFilter filter = FunctionDeclarationFilter.from(frame, functionNode.getTokens());
         String name = filter.getName().getValue();
         List<Token> argumentTypes = filter.getArgumentTypes();
@@ -268,12 +268,12 @@ public class InterpretatorV2 {
         throw new RuntimeException(message);
     }
 
-    private static ParseTreeNode findParentClassNode(InterpreterContext ctx) {
-        ParseTreeNode node = ctx.getCurrentCallStackFrame().getNode();
+    private static TreeNode findParentClassNode(InterpreterContext ctx) {
+        TreeNode node = ctx.getCurrentCallStackFrame().getNode();
         List<Token> tokens = node.getTokens();
-        while (node.getNodeType() != NodeType.Root) {
+        while (node.getType() != NodeType.Root) {
             node = node.getParent();
-            if (node.getNodeType() == NodeType.Class) return node;
+            if (node.getType() == NodeType.Class) return node;
         }
         throw new RuntimeException("could not find parent class node.\n" + Token.toString(tokens));
     }

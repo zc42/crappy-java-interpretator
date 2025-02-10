@@ -10,28 +10,28 @@ import java.util.function.Predicate;
 
 public class MissingCodeBlocks {
 
-    public static void addMissingCodeBlocks(ParseTreeNode root) {
+    public static void addMissingCodeBlocks(TreeNode root) {
 
-        Predicate<ParseTreeNode> predicate = e ->
-                e.getNodeType() == NodeType.If
-                        || e.getNodeType() == NodeType.Else
-                        || e.getNodeType() == NodeType.ElseIf
-                        || e.getNodeType() == NodeType.WhileStatement
-                        || e.getNodeType() == NodeType.ForStatement;
+        Predicate<TreeNode> predicate = e ->
+                e.getType() == NodeType.If
+                        || e.getType() == NodeType.Else
+                        || e.getType() == NodeType.ElseIf
+                        || e.getType() == NodeType.WhileStatement
+                        || e.getType() == NodeType.ForStatement;
 
-        List<ParseTreeNode> children = ParseTreeNodeUtils.getAllChildren(root, predicate);
+        List<TreeNode> children = ParseTreeNodeUtils.getAllChildren(root, predicate);
         children.forEach(MissingCodeBlocks::_addMissingCodeBlocks);
     }
 
-    private static void _addMissingCodeBlocks(ParseTreeNode node) {
-        Optional<ParseTreeNode> option = ParseTreeNodeUtils.getChild(node, NodeType.CodeBlock);
+    private static void _addMissingCodeBlocks(TreeNode node) {
+        Optional<TreeNode> option = ParseTreeNodeUtils.getChild(node, NodeType.CodeBlock);
         if(option.isPresent()) return;
         if(node.getChildren().isEmpty()) throw new RuntimeException("Missing children");
-        List<ParseTreeNode> children = new ArrayList<>(node.getChildren());
+        List<TreeNode> children = new ArrayList<>(node.getChildren());
         node.getChildren().clear();
         Token token1 = new Token(TokenType.BRACE, "{");
         Token token2 = new Token(TokenType.BRACE, "}");
-        ParseTreeNode codeBlock = new ParseTreeNode(NodeType.CodeBlock, List.of(token1, token2));
+        TreeNode codeBlock = new TreeNode(NodeType.CodeBlock, List.of(token1, token2));
         children.forEach(codeBlock::addChild);
         node.addChild(codeBlock);
     }

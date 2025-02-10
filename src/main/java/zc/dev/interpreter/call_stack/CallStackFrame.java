@@ -3,7 +3,7 @@ package zc.dev.interpreter.call_stack;
 import zc.dev.interpreter.StatementActions;
 import zc.dev.interpreter.lexer.Token;
 import zc.dev.interpreter.lexer.TokenType;
-import zc.dev.interpreter.tree_parser.ParseTreeNode;
+import zc.dev.interpreter.tree_parser.TreeNode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -16,40 +16,40 @@ import static zc.dev.interpreter.Utils.prnt;
 
 public class CallStackFrame {
     @Getter
-    private final ParseTreeNode node;
+    private final TreeNode node;
     private ObjectValue tempValue;
 
     private final Map<String, Optional<Object>> localVariables = new HashMap<>();
 
     private final Stack<Integer> codeBlockMarks = new Stack<>();
     private final Map<Integer, List<String>> codeBlockVariableNames = new HashMap<>();
-    private final Map<Integer, ParseTreeNode> executablesMap = new HashMap<>();
+    private final Map<Integer, TreeNode> executablesMap = new HashMap<>();
     private List<Integer> codeLinesNumbers;
-    private ParseTreeNode currentExecutableNode;
+    private TreeNode currentExecutableNode;
     @Getter
     private StatementActions currentExecutableNodeActions;
 
-    public CallStackFrame(ParseTreeNode node, Object[] args) {
+    public CallStackFrame(TreeNode node, Object[] args) {
         this.node = node;
         initExecutablesMap(node.getExecutableNodes());
         addArgsToVariables(node, args);
     }
 
-    private void initExecutablesMap(List<ParseTreeNode> executableNodes) {
+    private void initExecutablesMap(List<TreeNode> executableNodes) {
         if (executableNodes == null || executableNodes.isEmpty())
             throw new RuntimeException("No executable nodes found");
-        Optional<ParseTreeNode> nullLineNumberNode = executableNodes.stream().filter(e -> e.getLineNb() == null).findFirst();
+        Optional<TreeNode> nullLineNumberNode = executableNodes.stream().filter(e -> e.getLineNb() == null).findFirst();
         if (nullLineNumberNode.isPresent())
             throw new RuntimeException("Found node without line number: " + Token.toString(nullLineNumberNode.get().getTokens()));
 
         executableNodes.forEach(e -> executablesMap.put(e.getLineNb(), e));
-        codeLinesNumbers = executablesMap.values().stream().map(ParseTreeNode::getLineNb).sorted().collect(Collectors.toList());
+        codeLinesNumbers = executablesMap.values().stream().map(TreeNode::getLineNb).sorted().collect(Collectors.toList());
         Integer key = codeLinesNumbers.getFirst();
         currentExecutableNode = executablesMap.get(key);
         currentExecutableNodeActions = currentExecutableNode.getStatementActions().getCopy();
     }
 
-    private void addArgsToVariables(ParseTreeNode node, Object[] args) {
+    private void addArgsToVariables(TreeNode node, Object[] args) {
         List<Token> tokens = node.getTokens();
         int start = tokens.indexOf(new Token(TokenType.PARENTHESES, "("));
         List<Token> argNames = tokens.stream()
@@ -127,7 +127,7 @@ public class CallStackFrame {
         }
     }
 
-    public Optional<ParseTreeNode> getCurrentExecutableNode() {
+    public Optional<TreeNode> getCurrentExecutableNode() {
         if (currentExecutableNode == null) return Optional.empty();
         if (!currentExecutableNodeActions.isAllDone()) return Optional.of(currentExecutableNode);
 

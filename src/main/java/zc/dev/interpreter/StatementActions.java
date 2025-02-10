@@ -3,8 +3,7 @@ package zc.dev.interpreter;
 import zc.dev.interpreter.lexer.Token;
 import zc.dev.interpreter.lexer.TokenType;
 import zc.dev.interpreter.tree_parser.NodeType;
-import zc.dev.interpreter.tree_parser.ParseTreeNode;
-import zc.dev.interpreter.tree_parser.ParseTreeNodeUtils;
+import zc.dev.interpreter.tree_parser.TreeNode;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -44,13 +43,13 @@ public class StatementActions {
         return statementActions;
     }
 
-    public static StatementActions main(ParseTreeNode node) {
+    public static StatementActions main(TreeNode node) {
         StatementActions statementActions = new StatementActions();
         List<Token> tokens = node.getTokens();
         int size = tokens.size();
         IntStream.range(0, size).forEach(e -> accumStatementActions(statementActions, tokens, e));
-        statementActions.pushControlBlock = node.getNodeType() == NodeType.PUSH_CODE_BLOCK;//ParseTreeNodeUtils.hasChildNode(node, e -> e.getNodeType() == NodeType.PUSH_CODE_BLOCK);
-        statementActions.popControlBlock = node.getNodeType() == NodeType.POP_CODE_BLOCK;//ParseTreeNodeUtils.hasChildNode(node, e -> e.getNodeType() == NodeType.POP_CODE_BLOCK);
+        statementActions.pushControlBlock = node.getType() == NodeType.PUSH_CODE_BLOCK;//ParseTreeNodeUtils.hasChildNode(node, e -> e.getNodeType() == NodeType.PUSH_CODE_BLOCK);
+        statementActions.popControlBlock = node.getType() == NodeType.POP_CODE_BLOCK;//ParseTreeNodeUtils.hasChildNode(node, e -> e.getNodeType() == NodeType.POP_CODE_BLOCK);
         return statementActions;
     }
 

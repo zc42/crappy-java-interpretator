@@ -5,6 +5,7 @@ import zc.dev.interpreter.TextFileReader;
 import zc.dev.interpreter.lexer.LexerWithFSA;
 import zc.dev.interpreter.lexer.Token;
 import zc.dev.interpreter.lexer.TokenType;
+import zc.dev.interpreter.tree_parser.statement.decomposer.StatementDecomposer;
 
 import java.text.MessageFormat;
 import java.util.*;
@@ -25,7 +26,7 @@ public class CustomCodeParser {
         TextFileReader reader = TextFileReader.of(filePath);
         String code = String.join("\n", reader.readAll());
 
-        ParseTreeNode root = parseCode(code);
+        TreeNode root = parseCode(code);
         root.printTree("");
     }
 
@@ -46,9 +47,9 @@ public class CustomCodeParser {
                     P(NodeType.Annotation, CustomCodeParser::processAnnotation)
             );
 
-    public static ParseTreeNode parseCode(String code) {
+    public static TreeNode parseCode(String code) {
         ParseTreeContext ctx = getParseTreeContext(code);
-        ParseTreeNode root = ctx.getRootNode();
+        TreeNode root = ctx.getRootNode();
         MissingCodeBlocks.addMissingCodeBlocks(root);
         StatementDecomposer.decomposeStatements(root);
         root.printTree();
@@ -92,11 +93,11 @@ public class CustomCodeParser {
             }
         }
 
-        ParseTreeNode currentNode = ctx.getCurrentNode();
+        TreeNode currentNode = ctx.getCurrentNode();
         if (token.getValue().equals("==")) {
             currentNode = currentNode;
         }
-        NodeType currentNodeType = currentNode.getNodeType();
+        NodeType currentNodeType = currentNode.getType();
         if (token.getType() == TokenType.BRACE) {
             if (currentNodeType == NodeType.AssigmentStatement) return NodeType.ArrayDeclaration;
             return NodeType.CodeBlock;
@@ -157,22 +158,22 @@ public class CustomCodeParser {
             values = values;
         }
 
-        ParseTreeNode currentNode = ctx.getCurrentNode();
-        if (currentNode.getNodeType() == nodeType) {
+        TreeNode currentNode = ctx.getCurrentNode();
+        if (currentNode.getType() == nodeType) {
             tokens.forEach(currentNode::addToken);
         } else if ((nodeType == NodeType.RegularStatement || nodeType == NodeType.ReturnStatement)
                 && isNodeTerminated(currentNode)) {
             currentNode = findOpenCodeBlock(currentNode);
-            ParseTreeNode node = new ParseTreeNode(nodeType, tokens);
+            TreeNode node = new TreeNode(nodeType, tokens);
             currentNode.addChild(node);
             ctx.setCurrentNode(currentNode);
         } else {
-            ParseTreeNode node = new ParseTreeNode(nodeType, tokens);
+            TreeNode node = new TreeNode(nodeType, tokens);
             currentNode.addChild(node);
         }
     }
 
-    private static boolean isNodeTerminated(ParseTreeNode currentNode) {
+    private static boolean isNodeTerminated(TreeNode currentNode) {
         return isWithClosedCodeBlock(currentNode)
                 || isNodeWithOneStatement(currentNode, NodeType.If)
                 || isNodeWithOneStatement(currentNode, NodeType.Else)
@@ -181,33 +182,33 @@ public class CustomCodeParser {
 //                || isNodeRegularStatement(currentNode, NodeType.WhileStatement);
     }
 
-    private static boolean isNodeWithOneStatement(ParseTreeNode currentNode, NodeType nodeType) {
-        if (currentNode.getNodeType() != nodeType) return false;
+    private static boolean isNodeWithOneStatement(TreeNode currentNode, NodeType nodeType) {
+        if (currentNode.getType() != nodeType) return false;
 
-        List<ParseTreeNode> children = currentNode.getChildren();
+        List<TreeNode> children = currentNode.getChildren();
         if (children.size() != 1) return false;
 
-        NodeType childNodeType = children.get(0).getNodeType();
+        NodeType childNodeType = children.get(0).getType();
         return childNodeType == NodeType.RegularStatement || childNodeType == NodeType.ReturnStatement;
     }
 
-    private static ParseTreeNode findOpenCodeBlock(ParseTreeNode node) {
-        while (node.getNodeType() != NodeType.Root) {
+    private static TreeNode findOpenCodeBlock(TreeNode node) {
+        while (node.getType() != NodeType.Root) {
             if (isCodeBlock(node, true)) return node;
             node = node.getParent();
         }
         return node;
     }
 
-    private static boolean isCodeBlock(ParseTreeNode node, boolean open) {
-        if (node.getNodeType() != NodeType.CodeBlock) return false;
+    private static boolean isCodeBlock(TreeNode node, boolean open) {
+        if (node.getType() != NodeType.CodeBlock) return false;
         List<String> list = node.getTokens().stream().map(Token::getValue).collect(Collectors.toList());
         return open
                 ? list.contains("{") && !list.contains("}")
                 : list.contains("{") && list.contains("}");
     }
 
-    private static boolean isWithClosedCodeBlock(ParseTreeNode node) {
+    private static boolean isWithClosedCodeBlock(TreeNode node) {
         return node.getChildren().stream().anyMatch(e -> isCodeBlock(e, false));
     }
 
@@ -217,24 +218,24 @@ public class CustomCodeParser {
         boolean isElseIf = ctx.containsTokenValuesInCurrentPosition("else", "if");
         boolean isElse = Objects.equals(tokenValue, "else");
 
-        ParseTreeNode node;
+        TreeNode node;
         if (isIf) {
             List<Token> tokens = getTokensTerminatedWithParentheses(ctx);
-            node = new ParseTreeNode(NodeType.If, tokens);
-            ParseTreeNode node0 = new ParseTreeNode(NodeType.IfElseStatement);
+            node = new TreeNode(NodeType.If, tokens);
+            TreeNode node0 = new TreeNode(NodeType.IfElseStatement);
             node0.addChild(node);
-            ParseTreeNode currentNode = findOpenCodeBlock(ctx.getCurrentNode());
+            TreeNode currentNode = findOpenCodeBlock(ctx.getCurrentNode());
             currentNode.addChild(node0);
             ctx.setCurrentNode(node);
         } else if (isElseIf) {
             List<Token> tokens = getTokensTerminatedWithParentheses(ctx);
-            node = new ParseTreeNode(NodeType.ElseIf, tokens);
-            ParseTreeNode currentNode = findNode(ctx, NodeType.IfElseStatement);
+            node = new TreeNode(NodeType.ElseIf, tokens);
+            TreeNode currentNode = findNode(ctx, NodeType.IfElseStatement);
             currentNode.addChild(node);
             ctx.setCurrentNode(node);
         } else if (isElse) {
-            node = new ParseTreeNode(NodeType.Else, ctx.next());
-            ParseTreeNode currentNode = findNode(ctx, NodeType.IfElseStatement);
+            node = new TreeNode(NodeType.Else, ctx.next());
+            TreeNode currentNode = findNode(ctx, NodeType.IfElseStatement);
             currentNode.addChild(node);
             ctx.setCurrentNode(node);
         } else throw new ParseTreeException(ctx, "!isIf && !isElseIf && !isElse");
@@ -245,8 +246,8 @@ public class CustomCodeParser {
         IntStream.range(0, 2).forEach(i -> tokens.add(ctx.next()));
         getTokensEnclosedWithParentheses(ctx).map(tokens::addAll);
 
-        ParseTreeNode parseTreeNode = new ParseTreeNode(NodeType.Annotation, tokens);
-        ctx.saveAnnotation(parseTreeNode);
+        TreeNode treeNode = new TreeNode(NodeType.Annotation, tokens);
+        ctx.saveAnnotation(treeNode);
     }
 
     private static Optional<List<Token>> getTokensEnclosedWithParentheses(ParseTreeContext ctx) {
@@ -270,7 +271,7 @@ public class CustomCodeParser {
         if (!foundTerminal)
             throw new UnsupportedOperationException("could not find terminal literal for new line");
 
-        ParseTreeNode node = new ParseTreeNode(NodeType.Comment, tokens);
+        TreeNode node = new TreeNode(NodeType.Comment, tokens);
         ctx.getCurrentNode().addChild(node);
     }
 
@@ -281,23 +282,23 @@ public class CustomCodeParser {
     }
 
     private static void processCatchFinallyStatements(ParseTreeContext ctx) {
-        ParseTreeNode node;
+        TreeNode node;
         if (Objects.equals(ctx.peek().getValue(), "catch")) {
             List<Token> tokens = getTokensTerminatedWithParentheses(ctx);
-            node = new ParseTreeNode(NodeType.Catch, tokens);
+            node = new TreeNode(NodeType.Catch, tokens);
         } else if (Objects.equals(ctx.peek().getValue(), "finally")) {
-            node = new ParseTreeNode(NodeType.Catch, ctx.next());
+            node = new TreeNode(NodeType.Catch, ctx.next());
         } else throw new ParseTreeException(ctx, "!isCatch && !isFinally");
 
-        ParseTreeNode currentNode = findNode(ctx, NodeType.TryCatch);
+        TreeNode currentNode = findNode(ctx, NodeType.TryCatch);
         currentNode.addChild(node);
         ctx.setCurrentNode(node);
     }
 
-    private static ParseTreeNode findNode(ParseTreeContext ctx, NodeType nodeType) {
-        ParseTreeNode node = ctx.getCurrentNode();
-        while (node.getNodeType() != NodeType.Root) {
-            if (node.getNodeType() == nodeType) return node;
+    private static TreeNode findNode(ParseTreeContext ctx, NodeType nodeType) {
+        TreeNode node = ctx.getCurrentNode();
+        while (node.getType() != NodeType.Root) {
+            if (node.getType() == nodeType) return node;
             node = node.getParent();
         }
         return node;
@@ -307,9 +308,9 @@ public class CustomCodeParser {
         Token token = ctx.next();
         if (!Objects.equals(token.getValue(), "try"))
             throw new ParseTreeException(ctx, "!Objects.equals(token.value, \"try\")");
-        ParseTreeNode node0 = new ParseTreeNode(NodeType.TryCatch);
-        ParseTreeNode node = new ParseTreeNode(NodeType.Try, List.of(token));
-        ParseTreeNode currentNode = findOpenCodeBlock(ctx.getCurrentNode());
+        TreeNode node0 = new TreeNode(NodeType.TryCatch);
+        TreeNode node = new TreeNode(NodeType.Try, List.of(token));
+        TreeNode currentNode = findOpenCodeBlock(ctx.getCurrentNode());
         node0.addChild(node);
         currentNode.addChild(node0);
 
@@ -319,7 +320,7 @@ public class CustomCodeParser {
 
     private static void processBooleanStatement(ParseTreeContext ctx, NodeType nodeType) {
         List<Token> tokens = getTokensTerminatedWithParentheses(ctx);
-        ParseTreeNode node = new ParseTreeNode(nodeType, tokens);
+        TreeNode node = new TreeNode(nodeType, tokens);
         ctx.getCurrentNode().addChild(node);
         ctx.setCurrentNode(node);
     }
@@ -348,8 +349,8 @@ public class CustomCodeParser {
     }
 
     private static void processClassStatement(ParseTreeContext ctx) {
-        ParseTreeNode currentNode = ctx.getCurrentNode();
-        if (currentNode.getNodeType() != NodeType.Class)
+        TreeNode currentNode = ctx.getCurrentNode();
+        if (currentNode.getType() != NodeType.Class)
             throw new RuntimeException("ctx.getCurrentNode().getNodeType() != NodeType.Class");
 
         String terminal = "{";
@@ -405,13 +406,13 @@ public class CustomCodeParser {
 
         if (nodeType == null) throw new ParseTreeException(ctx, "could not determine node type");
 
-        ParseTreeNode node = new ParseTreeNode(nodeType, tokens);
+        TreeNode node = new TreeNode(nodeType, tokens);
         if (!ctx.getAnnotations().isEmpty()) {
             ctx.getAnnotations().forEach(node::addChild);
             ctx.clearAnnotations();
         }
 
-        ParseTreeNode parentNode = findOpenCodeBlock(ctx.getCurrentNode());
+        TreeNode parentNode = findOpenCodeBlock(ctx.getCurrentNode());
         parentNode.addChild(node);
         ctx.setCurrentNode(node);
     }
@@ -443,8 +444,8 @@ public class CustomCodeParser {
         Token token = ctx.peek();
         if (token.getType() != TokenType.BRACE) return;
 
-        ParseTreeNode currentNode = ctx.getCurrentNode();
-        NodeType nodeType = currentNode.getNodeType();
+        TreeNode currentNode = ctx.getCurrentNode();
+        NodeType nodeType = currentNode.getType();
         if (nodeType == NodeType.AssigmentStatement) return;
 
         ctx.next();
@@ -454,23 +455,23 @@ public class CustomCodeParser {
             if (!codeBlockNodeTypes.contains(nodeType))
                 throw new RuntimeException("codeBlock can't go under: " + nodeType);
 
-            ParseTreeNode node = new ParseTreeNode(NodeType.CodeBlock);
+            TreeNode node = new TreeNode(NodeType.CodeBlock);
             node.addToken(token);
             currentNode.addChild(node);
             ctx.setCurrentNode(node);
         } else {//close
 
-            currentNode = currentNode.getNodeType() != NodeType.CodeBlock
+            currentNode = currentNode.getType() != NodeType.CodeBlock
                     ? findOpenCodeBlock(currentNode)
                     : currentNode;
 
             currentNode.addToken(token);
-            ParseTreeNode parent = currentNode.getParent();
+            TreeNode parent = currentNode.getParent();
             ctx.setCurrentNode(parent);
         }
     }
 
-    public static ParseTreeNode parseCodeOS(String code) {
+    public static TreeNode parseCodeOS(String code) {
         int a;
         a = 1;
         int b = 1;
@@ -479,42 +480,42 @@ public class CustomCodeParser {
 
         // Root node for the parse tree
 
-        ParseTreeNode root = new ParseTreeNode(NodeType.Class);
+        TreeNode root = new TreeNode(NodeType.Class);
         root.addToken(new Token(TokenType.IDENTIFIER, "CustomParseTree"));
 
         // Add the main method declaration
-        ParseTreeNode mainMethod = new ParseTreeNode(NodeType.FunctionDeclarationStatement);
+        TreeNode mainMethod = new TreeNode(NodeType.FunctionDeclarationStatement);
         mainMethod.addToken(new Token(TokenType.IDENTIFIER, "main"));
         root.addChild(mainMethod);
 
         // Add method modifiers
-        mainMethod.addChild(new ParseTreeNode(NodeType.Modifier, Token.KeywordToken("public")));
-        mainMethod.addChild(new ParseTreeNode(NodeType.Modifier, Token.KeywordToken(" static ")));
+        mainMethod.addChild(new TreeNode(NodeType.Modifier, Token.KeywordToken("public")));
+        mainMethod.addChild(new TreeNode(NodeType.Modifier, Token.KeywordToken(" static ")));
 
         // Add method parameters
         List<Token> params = List.of(
                 new Token(TokenType.KEYWORD, "String[]"), //todo: split String and '[' ']'
                 new Token(TokenType.IDENTIFIER, "args"));
 
-        ParseTreeNode parameters = new ParseTreeNode(NodeType.Parameters, params);
+        TreeNode parameters = new TreeNode(NodeType.Parameters, params);
         mainMethod.addChild(parameters);
 
         // Add method body
         List<Token> braces = List.of(new Token(TokenType.BRACE, "{"), new Token(TokenType.BRACE, "}"));
-        ParseTreeNode methodBody = new ParseTreeNode(NodeType.CodeBlock, braces);
+        TreeNode methodBody = new TreeNode(NodeType.CodeBlock, braces);
         mainMethod.addChild(methodBody);
 
         // Add variable declaration inside method body
         List<Token> t = List.of(
                 new Token(TokenType.KEYWORD, "int[]"), //todo: split int and '[' ']'
                 new Token(TokenType.IDENTIFIER, "arr"));
-        ParseTreeNode varDeclaration = new ParseTreeNode(NodeType.VariableDeclaration, t);
-        varDeclaration.addChild(new ParseTreeNode(NodeType.AssigmentStatement, new Token(TokenType.NUMBER, "{12, 35, 1, 10, 34, 1}")));
+        TreeNode varDeclaration = new TreeNode(NodeType.VariableDeclaration, t);
+        varDeclaration.addChild(new TreeNode(NodeType.AssigmentStatement, new Token(TokenType.NUMBER, "{12, 35, 1, 10, 34, 1}")));
         methodBody.addChild(varDeclaration);
 
         // Add method call inside method body
-        ParseTreeNode methodCall = new ParseTreeNode(NodeType.FunctionCallStatement, new Token(TokenType.IDENTIFIER, "print2largest"));
-        methodCall.addChild(new ParseTreeNode(NodeType.Parameters, new Token(TokenType.IDENTIFIER, "print2largest")));
+        TreeNode methodCall = new TreeNode(NodeType.FunctionCallStatement, new Token(TokenType.IDENTIFIER, "print2largest"));
+        methodCall.addChild(new TreeNode(NodeType.Parameters, new Token(TokenType.IDENTIFIER, "print2largest")));
         methodBody.addChild(methodCall);
 
         return root;

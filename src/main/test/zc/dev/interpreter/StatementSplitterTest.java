@@ -5,6 +5,8 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import zc.dev.interpreter.lexer.Token;
+import zc.dev.interpreter.tree_parser.TreeNode;
+import zc.dev.interpreter.tree_parser.statement.decomposer.StatementSplitter;
 
 class StatementSplitterTest {
 
@@ -13,7 +15,7 @@ class StatementSplitterTest {
     void functionsCallWithArithmeticOperation() {
         String line = "int c = a ( b + 1 , a ( 1 , 2 ) ) + 1";
 
-        List<Statement> statements = new StatementSplitter().split(line);
+        List<TreeNode> statements = new StatementSplitter().split(line);
 
         assert statements.size() == 4;
         assert Token.toString(statements.get(0).getTokens()).equals("int $v0 = b + 1");
@@ -27,7 +29,7 @@ class StatementSplitterTest {
     void arithmeticOperationWithFunctionCalls() {
         String line = "b = 1 + a(a + 1, a(1, 2))";
 
-        List<Statement> statements = new StatementSplitter().split(line);
+        List<TreeNode> statements = new StatementSplitter().split(line);
 
         assert statements.size() == 4;
         assert Token.toString(statements.get(0).getTokens()).equals("int $v0 = a + 1");
@@ -41,7 +43,7 @@ class StatementSplitterTest {
     void booleanAndArithmeticOperationsWithsFunctionCall() {
         String line = "b > 0 || b + 1 > 0 || a(1)";
 
-        List<Statement> statements = new StatementSplitter().split(line);
+        List<TreeNode> statements = new StatementSplitter().split(line);
 
         assert statements.size() == 3;
         assert Token.toString(statements.get(0).getTokens()).equals("int $v0 = b + 1");
@@ -54,7 +56,7 @@ class StatementSplitterTest {
     void booleanExpressionWithMod() {
         String line = "boolean c = 0 == a % 2";
 
-        List<Statement> statements = new StatementSplitter().split(line);
+        List<TreeNode> statements = new StatementSplitter().split(line);
 
         assert statements.size() == 2;
         assert Token.toString(statements.get(0).getTokens()).equals("int $v0 = a % 2");
@@ -66,7 +68,7 @@ class StatementSplitterTest {
     void modWithBooleanExpression() {
         String line = "boolean c = a % 2 == 0";
 
-        List<Statement> statements = new StatementSplitter().split(line);
+        List<TreeNode> statements = new StatementSplitter().split(line);
 
         assert statements.size() == 2;
         assert Token.toString(statements.get(0).getTokens()).equals("int $v0 = a % 2");
@@ -78,7 +80,7 @@ class StatementSplitterTest {
     void functionCallWithMod() {
         String line = "prnt(a % 2)";
 
-        List<Statement> statements = new StatementSplitter().split(line);
+        List<TreeNode> statements = new StatementSplitter().split(line);
 
         assert statements.size() == 2;
         assert Token.toString(statements.get(0).getTokens()).equals("int $v0 = a % 2");

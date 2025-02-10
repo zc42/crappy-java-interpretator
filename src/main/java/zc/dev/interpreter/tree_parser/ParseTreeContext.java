@@ -18,12 +18,12 @@ public class ParseTreeContext implements IterableWithPeek<Token> {
     @Getter
     private int i = 0;
     @Getter
-    private final ParseTreeNode rootNode = new ParseTreeNode(NodeType.Root);
+    private final TreeNode rootNode = new TreeNode(NodeType.Root);
     @Getter
     @Setter
-    private ParseTreeNode currentNode;
+    private TreeNode currentNode;
     @Getter
-    private final List<ParseTreeNode> annotations = new ArrayList<>();
+    private final List<TreeNode> annotations = new ArrayList<>();
 
     public static ParseTreeContext from(List<Token> tokens) {
         ParseTreeContext ctx = new ParseTreeContext(tokens);
@@ -66,7 +66,7 @@ public class ParseTreeContext implements IterableWithPeek<Token> {
         return v1.equals(v2);
     }
 
-    public void saveAnnotation(ParseTreeNode node) {
+    public void saveAnnotation(TreeNode node) {
         this.annotations.add(node);
     }
 

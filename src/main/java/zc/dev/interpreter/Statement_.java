@@ -11,13 +11,13 @@ import java.util.List;
 
 @Getter
 @AllArgsConstructor(staticName = "from")
-public class Statement {
+public class Statement_ {
     @Setter
     private NodeType type;
     private final List<Token> tokens = new ArrayList<>();
 
-    public static Statement of(NodeType type, List<Token> tokens) {
-        Statement statement = Statement.from(type);
+    public static Statement_ of(NodeType type, List<Token> tokens) {
+        Statement_ statement = Statement_.from(type);
         statement.tokens.addAll(tokens);
         return statement;
     }

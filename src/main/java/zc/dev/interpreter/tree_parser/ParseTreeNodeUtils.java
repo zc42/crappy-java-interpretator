@@ -6,67 +6,66 @@ import zc.dev.interpreter.lexer.TokenType;
 
 import java.util.*;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import static zc.dev.interpreter.Pair.P;
 
 
 public class ParseTreeNodeUtils {
 
-    public static Pair<Integer, Integer> getFirstAndLastCodeLineNumbers(ParseTreeNode node) {
+    public static Pair<Integer, Integer> getFirstAndLastCodeLineNumbers(TreeNode node) {
         if (node.getChildren().isEmpty()) throw new RuntimeException("node.getChildren().isEmpty()");
-        Predicate<ParseTreeNode> predicate = e -> e.getLineNb() != null;
-        List<ParseTreeNode> nodes = getAllChildren(node, predicate);
+        Predicate<TreeNode> predicate = e -> e.getLineNb() != null;
+        List<TreeNode> nodes = getAllChildren(node, predicate);
         Integer lineNb = nodes.getFirst().getLineNb();
         Integer lineNb1 = nodes.getLast().getLineNb();
         return P(lineNb, lineNb1);
     }
 
-    public static FirstLastNode getFirstAndLastCodeLineNodes(ParseTreeNode node) {
+    public static FirstLastNode getFirstAndLastCodeLineNodes(TreeNode node) {
         if (node.getChildren().isEmpty()) throw new RuntimeException("node.getChildren().isEmpty()");
-        Predicate<ParseTreeNode> predicate = e -> e.getLineNb() != null;
-        List<ParseTreeNode> nodes = getAllChildren(node, predicate);
+        Predicate<TreeNode> predicate = e -> e.getLineNb() != null;
+        List<TreeNode> nodes = getAllChildren(node, predicate);
         if (nodes.isEmpty()) throw new RuntimeException("nodes.isEmpty()");
-        ParseTreeNode firstNode = nodes.getFirst();
-        ParseTreeNode lastNode = nodes.getLast();
+        TreeNode firstNode = nodes.getFirst();
+        TreeNode lastNode = nodes.getLast();
         return FirstLastNode.from(firstNode, lastNode);
     }
 
-    public static List<ParseTreeNode> getAllChildren(ParseTreeNode root, Predicate<ParseTreeNode> predicate) {
-        List<ParseTreeNode> nodes = new ArrayList<>();
-        Stack<ParseTreeNode> stack = new Stack<>();
+    public static List<TreeNode> getAllChildren(TreeNode root, Predicate<TreeNode> predicate) {
+        List<TreeNode> nodes = new ArrayList<>();
+        Stack<TreeNode> stack = new Stack<>();
         stack.push(root);
         while (!stack.isEmpty()) accumNodes(nodes, stack, predicate);
         return nodes;
     }
 
-    private static void accumNodes(List<ParseTreeNode> nodes, Stack<ParseTreeNode> stack, Predicate<ParseTreeNode> predicate) {
-        ParseTreeNode node = stack.pop();
+    private static void accumNodes(List<TreeNode> nodes, Stack<TreeNode> stack, Predicate<TreeNode> predicate) {
+        TreeNode node = stack.pop();
         if (predicate.test(node)) nodes.add(node);
-        List<ParseTreeNode> children = new ArrayList<>(node.getChildren());
+        List<TreeNode> children = new ArrayList<>(node.getChildren());
         Collections.reverse(children);
         children.forEach(stack::push);
     }
 
-    public static Optional<ParseTreeNode> getChild(ParseTreeNode node, NodeType nodeType) {
+    public static Optional<TreeNode> getChild(TreeNode node, NodeType nodeType) {
         return node.getChildren().stream()
-                .filter(e -> e.getNodeType() == nodeType)
+                .filter(e -> e.getType() == nodeType)
                 .findFirst();
     }
 
-    public static boolean hasChildNode(ParseTreeNode node, Predicate<ParseTreeNode> predicate) {
+    public static boolean hasChildNode(TreeNode node, Predicate<TreeNode> predicate) {
         return node.getChildren().stream().anyMatch(predicate);
     }
 
-    public static Optional<ParseTreeNode> findEntryPoint(ParseTreeNode node) {
+    public static Optional<TreeNode> findEntryPoint(TreeNode node) {
         return node.getChildren().stream()
-                .filter(e -> e.getNodeType() == NodeType.Class)
-                .map(ParseTreeNode::getChildren)
+                .filter(e -> e.getType() == NodeType.Class)
+                .map(TreeNode::getChildren)
                 .flatMap(Collection::stream)
-                .filter(e -> e.getNodeType() == NodeType.CodeBlock)
-                .map(ParseTreeNode::getChildren)
+                .filter(e -> e.getType() == NodeType.CodeBlock)
+                .map(TreeNode::getChildren)
                 .flatMap(Collection::stream)
-                .filter(e -> e.getNodeType() == NodeType.FunctionDeclarationStatement)
+                .filter(e -> e.getType() == NodeType.FunctionDeclarationStatement)
                 .filter(e -> containsToken(e.getTokens(), new Token(TokenType.IDENTIFIER, "main")))
                 .findFirst();
     }

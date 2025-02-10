@@ -17,40 +17,41 @@ import static zc.dev.interpreter.Utils.prnt;
 
 
 @Getter
-public class ParseTreeNode {
-    private final NodeType nodeType;
+public class TreeNode {
+    @Setter
+    private NodeType type;
     private final List<Token> tokens;
-    private final List<ParseTreeNode> children;
-    private ParseTreeNode parent;
+    private final List<TreeNode> children;
+    private TreeNode parent;
 
     @Setter
     private Integer lineNb;
     @Setter
-    private List<ParseTreeNode> executableNodes;
+    private List<TreeNode> executableNodes;
 
     @Setter
     private StatementActions statementActions;
 
-    public ParseTreeNode(NodeType nodeType) {
-        this.nodeType = nodeType;
+    public TreeNode(NodeType type) {
+        this.type = type;
         this.tokens = new ArrayList<>();
         this.children = new ArrayList<>();
     }
 
-    public ParseTreeNode(NodeType nodeType, Token token) {
-        this.nodeType = nodeType;
+    public TreeNode(NodeType type, Token token) {
+        this.type = type;
         this.tokens = new ArrayList<>();
         this.tokens.add(token);
         this.children = new ArrayList<>();
     }
 
-    public ParseTreeNode(NodeType nodeType, List<Token> tokens) {
-        this.nodeType = nodeType;
+    public TreeNode(NodeType type, List<Token> tokens) {
+        this.type = type;
         this.tokens = tokens.stream().filter(e -> e.getType() != TokenType.NewLine).collect(Collectors.toList());
         this.children = new ArrayList<>();
     }
 
-    public void addChild(ParseTreeNode child) {
+    public void addChild(TreeNode child) {
         children.add(child);
         child.parent = this;
     }
@@ -66,11 +67,11 @@ public class ParseTreeNode {
     public String getTreeAsString(String prefix) {
         String tokensAsString = tokens.stream().map(tokenValueMapper).collect(Collectors.joining(" "));
 //        boolean last = ParseTreeNavigator.isLast(this);
-        String mes = MessageFormat.format("{3}{0} {1}: {2}\n", prefix, nodeType, tokensAsString, getLineNb() == null ? "" : getLineNb());
+        String mes = MessageFormat.format("{3}{0} {1}: {2}\n", prefix, type, tokensAsString, getLineNb() == null ? "" : getLineNb());
 //        System.out.println(mes);
         StringBuilder builder = new StringBuilder();
         builder.append(mes);
-        Consumer<ParseTreeNode> treeNodeConsumer = e -> builder.append(e.getTreeAsString(prefix + "    "));
+        Consumer<TreeNode> treeNodeConsumer = e -> builder.append(e.getTreeAsString(prefix + "    "));
         children.forEach(treeNodeConsumer);
         return builder.toString();
     }
@@ -91,13 +92,17 @@ public class ParseTreeNode {
 
     @Override
     public String toString() {
-        return MessageFormat.format("{0} | {1}", nodeType, Token.toString(tokens));
+        return MessageFormat.format("{0} | {1}", type, Token.toString(tokens));
     }
 
-    public void addAsFirstChild(ParseTreeNode node) {
-        List<ParseTreeNode> _children = new ArrayList<>(children);
+    public void addAsFirstChild(TreeNode node) {
+        List<TreeNode> _children = new ArrayList<>(children);
         children.clear();
         children.add(node);
         children.addAll(_children);
+    }
+
+    public Token getToken(int index) {
+        return tokens.get(index);
     }
 }

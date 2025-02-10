@@ -1,5 +1,7 @@
 package zc.dev.interpreter.tree_parser;
 
+import zc.dev.interpreter.tree_parser.statement.decomposer.StatementDecomposer;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -7,44 +9,44 @@ import java.util.stream.Collectors;
 
 public class LocalVariableMarking {
 
-    public static void addCodeBlockMarks(ParseTreeNode root) {
+    public static void addCodeBlockMarks(TreeNode root) {
         getCodeBlocksNodes(root).forEach(LocalVariableMarking::_addCodeBlockMarks);
     }
 
-    private static void _addCodeBlockMarks(ParseTreeNode node) {
-        if (StatementDecomposer.isPredicateNode(node.getNodeType()))
+    private static void _addCodeBlockMarks(TreeNode node) {
+        if (StatementDecomposer.isPredicateNode(node.getType()))
             addCodeBlockPushPopCommands(node, NodeType.Predicate);
-        else if (node.getNodeType() == NodeType.CodeBlock) addCodeBlockPushPopCommands(node);
-        else if (node.getNodeType() == NodeType.IfElseStatement) return;
-        else if (node.getNodeType() == NodeType.Else) return;
-        else throw new RuntimeException("Add code block marks, node type: " + node.getNodeType());
+        else if (node.getType() == NodeType.CodeBlock) addCodeBlockPushPopCommands(node);
+        else if (node.getType() == NodeType.IfElseStatement) return;
+        else if (node.getType() == NodeType.Else) return;
+        else throw new RuntimeException("Add code block marks, node type: " + node.getType());
     }
 
-    private static void addCodeBlockPushPopCommands(ParseTreeNode parent, NodeType nodeType) {
-        ParseTreeNode child = ParseTreeNodeUtils.getChild(parent, nodeType).orElseThrow(() -> new RuntimeException("node not found, type: " + nodeType));
-        child.addAsFirstChild(new ParseTreeNode(NodeType.PUSH_CODE_BLOCK));
-        child.addChild(new ParseTreeNode(NodeType.POP_CODE_BLOCK));
+    private static void addCodeBlockPushPopCommands(TreeNode parent, NodeType nodeType) {
+        TreeNode child = ParseTreeNodeUtils.getChild(parent, nodeType).orElseThrow(() -> new RuntimeException("node not found, type: " + nodeType));
+        child.addAsFirstChild(new TreeNode(NodeType.PUSH_CODE_BLOCK));
+        child.addChild(new TreeNode(NodeType.POP_CODE_BLOCK));
     }
 
-    private static void addCodeBlockPushPopCommands(ParseTreeNode node) {
-        node.addAsFirstChild(new ParseTreeNode(NodeType.PUSH_CODE_BLOCK));
-        node.addChild(new ParseTreeNode(NodeType.POP_CODE_BLOCK));
+    private static void addCodeBlockPushPopCommands(TreeNode node) {
+        node.addAsFirstChild(new TreeNode(NodeType.PUSH_CODE_BLOCK));
+        node.addChild(new TreeNode(NodeType.POP_CODE_BLOCK));
     }
 
-    private static List<ParseTreeNode> getCodeBlocksNodes(ParseTreeNode root) {
-        List<ParseTreeNode> nodes = new ArrayList<>();
+    private static List<TreeNode> getCodeBlocksNodes(TreeNode root) {
+        List<TreeNode> nodes = new ArrayList<>();
         root.getChildren().forEach(e -> collectCodeBlocksNodes(nodes, e));
-        List<ParseTreeNode> collect = nodes.stream()
+        List<TreeNode> collect = nodes.stream()
                 .filter(LocalVariableMarking::filterCodeBlockNodes)
                 .collect(Collectors.toList());
         return collect;
     }
 
-    private static boolean filterCodeBlockNodes(ParseTreeNode node) {
-        if (node.getNodeType() != NodeType.CodeBlock) return true;
-        ParseTreeNode parent = node.getParent();
+    private static boolean filterCodeBlockNodes(TreeNode node) {
+        if (node.getType() != NodeType.CodeBlock) return true;
+        TreeNode parent = node.getParent();
         if (parent == null) return false;
-        NodeType parentType = parent.getNodeType();
+        NodeType parentType = parent.getType();
         if (parentType == NodeType.Class) return false;
         if (parentType == NodeType.FunctionDeclarationStatement) return false;
         return true;
@@ -59,8 +61,8 @@ public class LocalVariableMarking {
             NodeType.CodeBlock
     );
 
-    private static void collectCodeBlocksNodes(List<ParseTreeNode> nodes, ParseTreeNode node) {
-        if (localVariableCodeBlockTypes.contains(node.getNodeType())) nodes.add(node);
+    private static void collectCodeBlocksNodes(List<TreeNode> nodes, TreeNode node) {
+        if (localVariableCodeBlockTypes.contains(node.getType())) nodes.add(node);
         node.getChildren().forEach(e -> collectCodeBlocksNodes(nodes, e));
     }
 }
