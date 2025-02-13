@@ -14,6 +14,16 @@ public class TestCode {
             prnt(a.level);
             return a;
         }
+
+        private void xx(int x, int y) {
+            int b = y == x
+                    ? 1
+                    : y < x
+                    ? y == x * 5
+                    ? 2 : 3
+                    : 4;
+            prnt(b);
+        }
     }
 
     public static void main(String[] args) {
@@ -40,6 +50,7 @@ public class TestCode {
         }
         prnt("done");
         A x = new A().getChild().getChild().getChild().getChild();
+        x.xx(1, 2);
     }
 
     private static int a(int a, int b) {

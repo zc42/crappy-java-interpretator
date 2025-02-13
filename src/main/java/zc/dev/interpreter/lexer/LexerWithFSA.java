@@ -30,6 +30,8 @@ public class LexerWithFSA {
             else if (",".indexOf(c) != -1) addToken(ctx, TokenType.COMMA);
             else if (".".indexOf(c) != -1) addToken(ctx, TokenType.DOT);
             else if ("@".indexOf(c) != -1) addToken(ctx, TokenType.Ampersand);
+            else if ("?".indexOf(c) != -1) addToken(ctx, TokenType.QUETION_MARK);
+            else if (":".indexOf(c) != -1) addToken(ctx, TokenType.COLON);
 
             else addToken(ctx, TokenType.UNKNOWN);
         }
