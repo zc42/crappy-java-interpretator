@@ -8,6 +8,7 @@ import zc.dev.interpreter.tree_parser.TreeNode;
 
 import java.text.MessageFormat;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
@@ -51,7 +52,9 @@ public class QuestionMarkStatementDecomposer {
         if (!b) return Optional.empty();
 
         List<TreeNode> nodes = splitAssignmentAndWhatsLeft(tokens);
-        TreeNode treeNode = createPlainTree(nodes.get(1).getTokens());
+        List<TreeNode> statementNodes = splitToStatements(nodes.get(1).getTokens());
+        TreeNode treeNode = createPlainTree(statementNodes);
+        treeNode.printTree();
 
         throw new RuntimeException("not done yet");
     }
@@ -79,26 +82,19 @@ public class QuestionMarkStatementDecomposer {
         return tokenTester.testToken(tp_0, tp_1, tp_2) ? 2 : -1;
     }
 
-    private TreeNode createPlainTree(List<Token> tokens) {
+    private List<TreeNode> splitToStatements(List<Token> tokens) {
         List<TreeNode> nodes = new ArrayList<>();
-        IntStream.range(0, tokens.size()).boxed().forEach(e -> splitToStatements(nodes, tokens, e));
-        nodes.forEach(TreeNode::printTree);
-
-
-        Stack<TreeNode> stack = new Stack<>();
-        stack.push(nodes.get(0));
-
-
-        throw new RuntimeException("not done yet");
+        tokens.forEach(token -> accumStatements(nodes, token));
+        return nodes;
     }
 
-    private void splitToStatements(List<TreeNode> nodes, List<Token> tokens, int tokenIndex) {
-        Token token = tokens.get(tokenIndex);
+    private void accumStatements(List<TreeNode> nodes, Token token) {
         boolean isQuestionMark = token.getType() == TokenType.QUETION_MARK;
         boolean isColon = token.getType() == TokenType.COLON;
+        boolean isSeparator = isQuestionMark || isColon;
 
-        if (isQuestionMark || isColon) {
-            NodeType nodeType = isColon ? NodeType.Else : NodeType.If;
+        if (!nodes.isEmpty() && isSeparator) {
+            NodeType nodeType = isQuestionMark ? NodeType.If : NodeType.Else;
             TreeNode node = new TreeNode(nodeType);
             nodes.add(node);
         } else {
@@ -111,6 +107,60 @@ public class QuestionMarkStatementDecomposer {
             }
             node.addToken(token);
         }
+    }
+
+    private TreeNode createPlainTree(List<TreeNode> nodes) {
+        TreeNode root = nodes.getFirst();
+        AtomicReference<TreeNode> reference = new AtomicReference<>(root);
+        IntStream.range(1, nodes.size()).boxed().forEach(e -> {
+
+            root.printTree();
+
+            TreeNode node02 = e - 2 >= 0 ? nodes.get(e - 2) : null;
+            TreeNode node01 = nodes.get(e - 1);
+
+            boolean ___if = node02 != null && (node02.getType() == NodeType.If || node02.getType() == NodeType.IfElseStatement);
+            boolean isLastRoot = node01.getType() == NodeType.IfElseStatement;
+            boolean __if = isLastRoot || node01.getType() == NodeType.If;
+
+            TreeNode node = nodes.get(e);
+            boolean _if = node.getType() == NodeType.If;
+
+            TreeNode parent = reference.get();
+
+            boolean b1 = !___if && __if && _if;
+            boolean b2 = ___if && __if && !_if;
+            boolean b3 = ___if && !__if && !_if;
+            boolean b4 = !__if && _if;
+
+            boolean isChildNode = isLastRoot || b1 || b4;
+            boolean belongsToPrevParent = b2 || b3;
+
+            if (isChildNode) {
+                parent.addChild(node);
+                reference.set(node);
+            } else if (belongsToPrevParent) {
+                parent = getParentWithOneChild(parent);
+                parent.addChild(node);
+                reference.set(node);
+            } else {
+                throw new RuntimeException("not implemented: " + node);
+            }
+        });
+
+        TreeNode last = reference.get();
+        while (last.getParent() != null) {
+            last = last.getParent();
+        }
+
+        return last;
+    }
+
+    private TreeNode getParentWithOneChild(TreeNode node) {
+        while (node.getChildren().size() != 1) {
+            node = node.getParent();
+        }
+        return node;
     }
 
     private static boolean startsWithAssignment(List<Token> tokens) {
