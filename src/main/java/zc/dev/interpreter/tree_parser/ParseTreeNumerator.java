@@ -2,11 +2,9 @@ package zc.dev.interpreter.tree_parser;
 
 import zc.dev.interpreter.StatementActions;
 
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -30,14 +28,13 @@ public class ParseTreeNumerator {
     }
 
     public static void addLineNumbers(TreeNode root) {
-        List<TreeNode> nodes = new ArrayList<>();
-        collectParseTreeNode(nodes, root, NodeType.FunctionDeclarationStatement);
-        nodes.forEach(ParseTreeNumerator::addLineNumberToExecutableStatements);
+        NodeType nodeType = NodeType.FunctionDeclarationStatement;
+        TreeNodeFlattener.makeFlat(root, nodeType).forEach(ParseTreeNumerator::addLineNumberToExecutableStatements);
     }
 
     public static void addExecutablesToFunctionDeclarationNodes(TreeNode root) {
-        List<TreeNode> nodes = new ArrayList<>();
-        collectParseTreeNode(nodes, root, NodeType.FunctionDeclarationStatement);
+        NodeType nodeType = NodeType.FunctionDeclarationStatement;
+        List<TreeNode> nodes = TreeNodeFlattener.makeFlat(root, nodeType);
         nodes.forEach(ParseTreeNumerator::addExecutableStatements);
         nodes.forEach(ParseTreeNumerator::addStatementActions);
     }
@@ -58,17 +55,13 @@ public class ParseTreeNumerator {
     }
 
     private static List<TreeNode> getExecutableNodes(TreeNode root) {
-        List<TreeNode> nodes = new ArrayList<>();
-        collectParseTreeNode(nodes, root);
-        return nodes.stream()
+        return TreeNodeFlattener.makeFlat(root).stream()
                 .filter(ParseTreeNumerator::isNodeExecutable)
                 .collect(Collectors.toList());
     }
 
     private static List<TreeNode> getNodesWithLineNb(TreeNode root) {
-        List<TreeNode> nodes = new ArrayList<>();
-        collectParseTreeNode(nodes, root);
-        return nodes.stream()
+        return TreeNodeFlattener.makeFlat(root).stream()
                 .filter(e -> e.getLineNb() != null)
                 .collect(Collectors.toList());
     }
@@ -91,15 +84,4 @@ public class ParseTreeNumerator {
         return false;
     }
 
-    private static void collectParseTreeNode(List<TreeNode> identity, TreeNode node) {
-        identity.add(node);
-        Consumer<TreeNode> treeNodeConsumer = e -> collectParseTreeNode(identity, e);
-        node.getChildren().forEach(treeNodeConsumer);
-    }
-
-    private static void collectParseTreeNode(List<TreeNode> identity, TreeNode node, NodeType nodeType) {
-        if (node.getType() == nodeType) identity.add(node);
-        Consumer<TreeNode> treeNodeConsumer = e -> collectParseTreeNode(identity, e, nodeType);
-        node.getChildren().forEach(treeNodeConsumer);
-    }
 }

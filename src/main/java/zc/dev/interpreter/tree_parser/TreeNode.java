@@ -7,30 +7,36 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static zc.dev.interpreter.Utils.prnt;
 
-
-@Getter
 public class TreeNode {
+    @Getter
     @Setter
     private NodeType type;
+    @Getter
     private final List<Token> tokens;
+    @Getter
     private final List<TreeNode> children;
+    @Getter
     private TreeNode parent;
 
+    @Getter
     @Setter
     private Integer lineNb;
+    @Getter
     @Setter
     private List<TreeNode> executableNodes;
 
+    @Getter
     @Setter
     private StatementActions statementActions;
+    private final List<NodeType> nodeTypePath = new ArrayList<>();
 
     public TreeNode(NodeType type) {
         this.type = type;
@@ -54,6 +60,13 @@ public class TreeNode {
     public void addChild(TreeNode child) {
         children.add(child);
         child.parent = this;
+        child.nodeTypePath.addAll(getNodeTypePath());
+    }
+
+    private List<NodeType> getNodeTypePath() {
+        List<NodeType> nodeTypes = new ArrayList<>(nodeTypePath);
+        nodeTypes.add(type);
+        return nodeTypes;
     }
 
     public void printTree(String prefix) {
@@ -112,5 +125,32 @@ public class TreeNode {
             node = node.getParent();
         }
         return node;
+    }
+
+    public void printNode() {
+        String message = MessageFormat.format("{0}: {1}", type, Token.toString(tokens));
+        prnt(message);
+    }
+
+    public Optional<TreeNode> getChildNode(List<NodeType> nodeTypePath) {
+        Stack<TreeNode> stack = new Stack<>();
+        stack.addAll(children);
+        while (!stack.isEmpty()) {
+            TreeNode node = stack.pop();
+            if (endsWith(node.getNodeTypePath(), nodeTypePath)) return Optional.of(node);
+            stack.addAll(node.getChildren());
+        }
+        return Optional.empty();
+    }
+
+    private boolean endsWith(List<NodeType> nodeTypes0, List<NodeType> nodeTypes1) {
+        int size0 = nodeTypes0.size();
+        int size1 = nodeTypes1.size();
+        if (size0 < size1) return false;
+        int delta = size0 - size1;
+        return IntStream.range(delta, size1).boxed()
+                .filter(i -> nodeTypes0.get(i) != nodeTypes1.get(i - delta))
+                .findFirst()
+                .isEmpty();
     }
 }

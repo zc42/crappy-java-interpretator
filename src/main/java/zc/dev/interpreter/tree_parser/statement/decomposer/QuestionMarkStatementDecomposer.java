@@ -127,10 +127,12 @@ public class QuestionMarkStatementDecomposer {
         children.forEach(newNode::addChild);
 
         List<Token> predicateTokens = node.getParent() == null ? newNode.getTokens() : node.getParent().getTokens();
+        NodeType parentNodeType = node.getParent() == null ? NodeType.UNKNOWN : node.getParent().getType();
         if (newNode.getChildren().isEmpty()) {
             if (nodeType == NodeType.If) {
                 addPredicateNode(newNode, predicateTokens);
                 addStatementNode(newNode, false);
+                if (parentNodeType != NodeType.IfElseStatement) addIfElse(newNode);
             } else if (nodeType == NodeType.Else) {
                 addStatementNode(newNode, false);
             } else throw new RuntimeException("node type error: " + newNode);
@@ -139,12 +141,26 @@ public class QuestionMarkStatementDecomposer {
                 addPredicateNode(newNode, predicateTokens);
                 addStatementNode(newNode, true);
                 addIfElse(newNode);
+                adjustChildIfElseStatement(newNode);
             } else if (nodeType == NodeType.Else) {
                 moveElseUnderIfElseStatement(newNode);
             } else if (nodeType == NodeType.IfElseStatement) return newNode;
             else throw new RuntimeException("node type error: " + newNode);
         }
+        node.printNode();
+        newNode.printTree();
+        prnt("---");
         return newNode;
+    }
+
+    private void adjustChildIfElseStatement(TreeNode node) {
+        List<NodeType> pathToElse = List.of(NodeType.If, NodeType.CodeBlock, NodeType.Else);
+        List<NodeType> pathToIfElse = List.of(NodeType.If, NodeType.CodeBlock, NodeType.IfElseStatement);
+        Consumer<TreeNode> addElseAsChild = e -> node.getChildNode(pathToElse).ifPresent(child -> {
+            child.getParent().getChildren().remove(child);
+            e.addChild(child);
+        });
+        node.getChildNode(pathToIfElse).ifPresent(addElseAsChild);
     }
 
     private static void addIfElse(TreeNode node) {
