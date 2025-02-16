@@ -105,4 +105,12 @@ public class TreeNode {
     public Token getToken(int index) {
         return tokens.get(index);
     }
+
+    public TreeNode getRoot() {
+        TreeNode node = this;
+        while (node.getParent() != null) {
+            node = node.getParent();
+        }
+        return node;
+    }
 }

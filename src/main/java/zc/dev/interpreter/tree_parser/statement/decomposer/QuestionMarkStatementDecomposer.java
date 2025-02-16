@@ -1,5 +1,9 @@
 package zc.dev.interpreter.tree_parser.statement.decomposer;
 
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 import zc.dev.interpreter.lexer.LexerWithFSA;
 import zc.dev.interpreter.lexer.Token;
 import zc.dev.interpreter.lexer.TokenType;
@@ -56,7 +60,130 @@ public class QuestionMarkStatementDecomposer {
         TreeNode treeNode = createPlainTree(statementNodes);
         treeNode.printTree();
 
-        throw new RuntimeException("not done yet");
+        treeNode = transformToIfElseTree(treeNode);
+        fixNodeTokens(treeNode);
+
+        TreeNode assignmentNode = nodes.getFirst();
+        addAssignment(assignmentNode, treeNode);
+        assignmentNode.printTree();
+        treeNode.printTree();
+
+        List<TreeNode> result = assignmentNode.getTokens().size() > 1
+                ? List.of(assignmentNode, treeNode)
+                : List.of(treeNode);
+
+        return Optional.of(result);
+    }
+
+    private void addAssignment(TreeNode assigmentNode, TreeNode ifElseNode) {
+        Token identifier = assigmentNode.getTokens().getLast();
+        if (identifier.getType() != TokenType.IDENTIFIER)
+            throw new RuntimeException("identifier is not identifier: " + identifier);
+        addAssignment(ifElseNode, identifier);
+    }
+
+    private void addAssignment(TreeNode node, Token identifier) {
+        node.getChildren().forEach(child -> addAssignment(child, identifier));
+
+        boolean b1 = node.getType() == NodeType.RegularStatement;
+        boolean b2 = node.getParent() != null && node.getParent().getType() == NodeType.CodeBlock;
+        boolean b3 = b2 && node.getParent().getParent() == null || b2 && node.getParent().getParent().getType() != NodeType.Predicate;
+
+        boolean addAssignment = b1 && b2 && b3;
+        if (!addAssignment) return;
+
+        List<Token> tokens = node.getTokens();
+        List<Token> nodeTokens = new ArrayList<>(tokens);
+        tokens.clear();
+        tokens.add(identifier);
+        tokens.add(new Token(TokenType.ASSIGNMENT, "="));
+        tokens.addAll(nodeTokens);
+    }
+
+    private void fixNodeTokens(TreeNode node) {
+        node.getChildren().forEach(this::fixNodeTokens);
+        NodeType nodeType = node.getType();
+        if (nodeType == NodeType.Else || nodeType == NodeType.IfElseStatement) node.getTokens().clear();
+        else if (nodeType == NodeType.If) {
+            node.getTokens().clear();
+            node.getTokens().addAll(getPredicateStatement(node));
+        }
+    }
+
+    private Collection<Token> getPredicateStatement(TreeNode node) {
+        TreeNode predicateNode = node.getChildren().stream().filter(e -> e.getType() == NodeType.Predicate).findFirst().orElseThrow();
+        TreeNode codeBlockNode = predicateNode.getChildren().stream().filter(e -> e.getType() == NodeType.CodeBlock).findFirst().orElseThrow();
+        return codeBlockNode.getChildren().getFirst().getTokens();
+    }
+
+    private TreeNode transformToIfElseTree(TreeNode node) {
+
+        List<TreeNode> children = node.getChildren().isEmpty()
+                ? List.of()
+                : node.getChildren().stream().map(this::transformToIfElseTree).toList();
+
+        NodeType nodeType = node.getType();
+        TreeNode newNode = new TreeNode(nodeType, node.getTokens());
+        children.forEach(newNode::addChild);
+
+        List<Token> predicateTokens = node.getParent() == null ? newNode.getTokens() : node.getParent().getTokens();
+        if (newNode.getChildren().isEmpty()) {
+            if (nodeType == NodeType.If) {
+                addPredicateNode(newNode, predicateTokens);
+                addStatementNode(newNode, false);
+            } else if (nodeType == NodeType.Else) {
+                addStatementNode(newNode, false);
+            } else throw new RuntimeException("node type error: " + newNode);
+        } else {
+            if (nodeType == NodeType.If) {// || nodeType == NodeType.IfElseStatement) {
+                addPredicateNode(newNode, predicateTokens);
+                addStatementNode(newNode, true);
+                addIfElse(newNode);
+            } else if (nodeType == NodeType.Else) {
+                moveElseUnderIfElseStatement(newNode);
+            } else if (nodeType == NodeType.IfElseStatement) return newNode;
+            else throw new RuntimeException("node type error: " + newNode);
+        }
+        return newNode;
+    }
+
+    private static void addIfElse(TreeNode node) {
+        TreeNode ifStatement = new TreeNode(NodeType.If);
+        node.getChildren().forEach(ifStatement::addChild);
+        node.getChildren().removeAll(ifStatement.getChildren());
+        node.addChild(ifStatement);
+        node.setType(NodeType.IfElseStatement);
+    }
+
+    private void moveElseUnderIfElseStatement(TreeNode node) {
+        TreeNode ifElseStatement = node.getChildren().stream().filter(e -> e.getType() == NodeType.IfElseStatement).findFirst().orElseThrow();
+        TreeNode elseStatement = node.getChildren().stream().filter(e -> e.getType() == NodeType.Else).findFirst().orElseThrow();
+        node.getChildren().remove(elseStatement);
+        ifElseStatement.addChild(elseStatement);
+    }
+
+    private static void addStatementNode(TreeNode node, boolean hasChildren) {
+        TreeNode codeBlock = new TreeNode(NodeType.CodeBlock);
+        if (hasChildren) {
+            node.getChildren().stream()
+                    .filter(e -> e.getType() != NodeType.Predicate)
+                    .forEach(codeBlock::addChild);
+        } else {
+            TreeNode statement = new TreeNode(NodeType.RegularStatement, node.getTokens());
+            codeBlock.addChild(statement);
+        }
+        node.getChildren().removeAll(codeBlock.getChildren());
+        node.addChild(codeBlock);
+//        node.getTokens().clear();
+    }
+
+    private static void addPredicateNode(TreeNode node, List<Token> parentNodeTokens) {
+        TreeNode predicateNode = new TreeNode(NodeType.Predicate);
+        TreeNode codeBlock1 = new TreeNode(NodeType.CodeBlock);
+        TreeNode statement1 = new TreeNode(NodeType.RegularStatement, parentNodeTokens);
+        predicateNode.addChild(codeBlock1);
+        codeBlock1.addChild(statement1);
+        node.addChild(predicateNode);
     }
 
     private List<TreeNode> splitAssignmentAndWhatsLeft(List<Token> tokens) {
@@ -65,7 +192,7 @@ public class QuestionMarkStatementDecomposer {
         List<Token> tokens1 = tokens.subList(0, index);
         List<Token> tokens2 = tokens.subList(index + 1, tokens.size());
         return List.of(
-                new TreeNode(NodeType.UNKNOWN, tokens1),
+                new TreeNode(NodeType.RegularStatement, tokens1),
                 new TreeNode(NodeType.UNKNOWN, tokens2));
     }
 
@@ -111,22 +238,29 @@ public class QuestionMarkStatementDecomposer {
 
     private TreeNode createPlainTree(List<TreeNode> nodes) {
         TreeNode root = nodes.getFirst();
-        AtomicReference<TreeNode> reference = new AtomicReference<>(root);
-        IntStream.range(1, nodes.size()).boxed().forEach(e -> {
+        AtomicReference<TreeNode> nodeReference = new AtomicReference<>(root);
+        IntStream.range(1, nodes.size()).boxed().forEach(e -> constructTree(nodeReference, nodes, e));
+        return nodeReference.get().getRoot();
+    }
 
-            root.printTree();
+    @Getter
+    @ToString
+    @RequiredArgsConstructor(staticName = "of", access = AccessLevel.PRIVATE)
+    public static class TreeNodePredicate {
+        private final TreeNode node;
+        private final boolean childNode;
+        private final boolean childOfPrevParent;
 
-            TreeNode node02 = e - 2 >= 0 ? nodes.get(e - 2) : null;
-            TreeNode node01 = nodes.get(e - 1);
+        public static TreeNodePredicate from(List<TreeNode> nodes, int index) {
+            TreeNode node02 = index - 2 >= 0 ? nodes.get(index - 2) : null;
+            TreeNode node01 = nodes.get(index - 1);
 
             boolean ___if = node02 != null && (node02.getType() == NodeType.If || node02.getType() == NodeType.IfElseStatement);
             boolean isLastRoot = node01.getType() == NodeType.IfElseStatement;
             boolean __if = isLastRoot || node01.getType() == NodeType.If;
 
-            TreeNode node = nodes.get(e);
+            TreeNode node = nodes.get(index);
             boolean _if = node.getType() == NodeType.If;
-
-            TreeNode parent = reference.get();
 
             boolean b1 = !___if && __if && _if;
             boolean b2 = ___if && __if && !_if;
@@ -134,26 +268,27 @@ public class QuestionMarkStatementDecomposer {
             boolean b4 = !__if && _if;
 
             boolean isChildNode = isLastRoot || b1 || b4;
-            boolean belongsToPrevParent = b2 || b3;
+            boolean isChildOfPrevParent = b2 || b3;
 
-            if (isChildNode) {
-                parent.addChild(node);
-                reference.set(node);
-            } else if (belongsToPrevParent) {
-                parent = getParentWithOneChild(parent);
-                parent.addChild(node);
-                reference.set(node);
-            } else {
-                throw new RuntimeException("not implemented: " + node);
-            }
-        });
-
-        TreeNode last = reference.get();
-        while (last.getParent() != null) {
-            last = last.getParent();
+            return TreeNodePredicate.of(node, isChildNode, isChildOfPrevParent);
         }
+    }
 
-        return last;
+    private void constructTree(AtomicReference<TreeNode> parentNodeReference, List<TreeNode> nodes, int index) {
+        TreeNodePredicate predicate = TreeNodePredicate.from(nodes, index);
+        TreeNode parent = parentNodeReference.get();
+        TreeNode node = predicate.node;
+
+        if (predicate.isChildNode()) {
+            parent.addChild(node);
+            parentNodeReference.set(node);
+        } else if (predicate.isChildOfPrevParent()) {
+            parent = getParentWithOneChild(parent);
+            parent.addChild(node);
+            parentNodeReference.set(node);
+        } else {
+            throw new RuntimeException("not implemented: " + predicate);
+        }
     }
 
     private TreeNode getParentWithOneChild(TreeNode node) {
